@@ -80,3 +80,16 @@ export async function transfer({ token, referenceId, amount, currency, msisdn, e
         }
     });
 }
+
+export async function getTransfertStatus({ token, referenceId, }: 
+    {token: string, referenceId: string }) {
+    const url = `${MOMO_BASE}/disbursement/v1_0/transfer/${referenceId}`;
+    const { data } = await axios.get(url, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+            'X-Target-Environment': MOMO_TARGET,
+            'Ocp-Apim-Subscription-Key': MOMO_DISBURSEMENT_KEY
+        }
+    });
+    return data;
+}

@@ -42,7 +42,7 @@ export default function TopUp() {
 
     //const operator = method.includes("MTN") ? "MTN" : method.includes("Moov") ? "Moov" : undefined;
     if (method === "MTN_MoMo") {
-      await startDeposit({ userId: "d9c5a0b2-0f7c-4f3b-9a86-3f8f57b0b2a1", amount: String(amount), msisdn: phone, currency: "EUR" });
+      await startDeposit({ userId: "d9c5a0b2-0f7c-4f3b-9a86-3f8f57b0b2a1", amount: String(amount), msisdn: msisdn, currency: "EUR" });
     } else {
       alert("Méthode non encore supportée");
     }
@@ -66,7 +66,7 @@ export default function TopUp() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-emerald-600" />
-                Recharge portefeuille lancée
+                Recharge portefeuille effectué
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -158,7 +158,6 @@ export default function TopUp() {
                 disabled={loading || !canSubmit() || isWaiting}
                 className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white"
               >
-                { }
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Envoi...

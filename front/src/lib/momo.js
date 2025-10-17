@@ -5,6 +5,11 @@ export async function createDeposit(req) {
     return data;
 }
 
+export async function createWithdraw(req) {
+    const { data } = await api.post("/withdraw", req);
+    return data;
+}
+
 export async function getTxStatus(txId) {
     const { data } = await api.get(`/transactions/${txId}`);
     return data;
