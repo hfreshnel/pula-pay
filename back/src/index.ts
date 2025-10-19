@@ -3,9 +3,9 @@ import express from 'express';
 import pino from 'pino';
 import { pinoHttp } from 'pino-http';
 import { Prisma } from "@prisma/client";
-import swaggerJsDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { v4 as uuidv4 } from 'uuid';
+import YAML from "yamljs"
 import { z } from 'zod';
 
 import accountService from "./services/accountService.js";
@@ -19,25 +19,9 @@ app.use(cors({ origin: "http://localhost:5173" }))
 const port = process.env.PORT || 3000;
 
 // Swagger setup
-const swaggerOptions = {
-    definition: {
-        openapi: "3.1.0",
-        info: {
-            title: "PLA-Momo API",
-            version: "1.0.0",
-            description:
-                "This is a simple CRUD API application made with Express and documented with Swagger",
-        },
-        servers: [
-            {
-                url: "http://localhost:3000",
-            },
-        ],
-    },
-    apis: ["./src/routes/*.js"],
-};
-const swaggerDocs = swaggerJsDoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+const swaggerDocument = YAML.load("./src/docs/swagger.yaml");
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 const logger = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' });
 app.use(pinoHttp({ logger }));
