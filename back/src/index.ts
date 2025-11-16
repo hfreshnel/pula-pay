@@ -358,11 +358,12 @@ app.post("/auth/login", async (req, res) => {
 
 app.get("/me", verifyAuth, async (req, res) => {
     try {
-        if (req.user) {
-            const user = userService.getUserById(req.user.id);
-            return res.status(202).json(user);
+        const userData = await userService.getUserById(req.user!.id);
+
+        if (!userData) {
+            return res.status(404).json({ error: "Utilisateur non trouvé" });
         }
-        throw new Error("Missing user id");
+        return res.status(200).json({ userData });
         
     } catch (err) {
         req.log?.error?.({ err }, "verification error");

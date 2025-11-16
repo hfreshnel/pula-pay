@@ -42,7 +42,7 @@ export default function verifyAuth(req: Request, res: Response, next: NextFuncti
         };
 
         next();
-    } catch (err) {
+    } catch (error) {
         if (error instanceof jwt.TokenExpiredError) {
             res.status(401).json({ error: "Token expiré" });
             return;

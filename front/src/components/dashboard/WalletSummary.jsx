@@ -5,13 +5,18 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
+import { useAuthContext } from '../common/AuthContext';
 import { useBalance } from '@/hooks/useBalance';
 
-export default function WalletSummary({ user }) {
+export default function WalletSummary() {
   const [showBalance, setShowBalance] = useState(true);
   const { balance, loading, error, getBalance } = useBalance();
 
-  const userId = user?.userId || "d9c5a0b2-0f7c-4f3b-9a86-3f8f57b0b2a1";
+  const { user } = useAuthContext();
+  console.log(`user: ${user.id}`);
+
+  //const userId = user?.userId || "d9c5a0b2-0f7c-4f3b-9a86-3f8f57b0b2a1";
+  const userId = user?.id;
   const currency = "EUR";
 
   const formatAmount = (amount) => {

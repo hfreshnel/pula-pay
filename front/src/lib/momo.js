@@ -1,4 +1,4 @@
-import { api, newIdempotencyKey } from "./api";
+import api from "./api";
 
 export async function createDeposit(req) {
     const { data } = await api.post("/deposits", req);

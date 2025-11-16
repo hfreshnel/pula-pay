@@ -10,18 +10,21 @@ import BrandLogo from "@/components/common/BrandLogo";
 import 'react-phone-input-2/lib/style.css';
 
 import { useLogin } from "@/hooks/useLogin";
+import { useAuthContext } from "@/components/common/AuthContext";
 
 export default function Login() {
-    const [phone, setPhone] = useState(null);
-    const [password, setPassword] = useState(null)
-    const [formError, setFormError] = useState(null);
+    const [phone, setPhone] = useState("");
+    const [password, setPassword] = useState("")
+    const [formError, setFormError] = useState("");
     const { token, loading, error, startLogin } = useLogin();
+    const { login } = useAuthContext();
     const navigate = useNavigate();
 
     useEffect(() => {
         if (token) {
-            localStorage.setItem('authToken', token);
-            navigate(createPageUrl("Dashboard"));
+            login(token).then(() => {
+                navigate(createPageUrl("Dashboard"));
+            });
         }
     }, [token, navigate]);
 
