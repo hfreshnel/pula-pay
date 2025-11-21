@@ -14,8 +14,8 @@ import { useRegister } from "@/hooks/useRegister";
 import { useVerify } from "@/hooks/useVerify";
 
 export default function Register() {
-    const [phone, setPhone] = useState(null);
-    const [password, setPassword] = useState(null);
+    const [phone, setPhone] = useState("");
+    const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [formError, setFormError] = useState(null);
     const [otp, setOtp] = useState("");

@@ -15,7 +15,6 @@ export default function WalletSummary() {
   const { user } = useAuthContext();
   console.log(`user: ${user.id}`);
 
-  //const userId = user?.userId || "d9c5a0b2-0f7c-4f3b-9a86-3f8f57b0b2a1";
   const userId = user?.id;
   const currency = "EUR";
 
