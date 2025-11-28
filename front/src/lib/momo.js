@@ -30,3 +30,7 @@ export async function getRecipientId(senderId, phone) {
     return data;
 }
 
+export async function getTransactionsList(userId) {
+    const { data } = await api.get(`/users/${userId}/transactions`);
+    return data;
+}

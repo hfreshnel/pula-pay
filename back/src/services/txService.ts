@@ -99,6 +99,14 @@ const txService = {
         return tx;
     },
 
+    getTxs: async function (txIds: string[]) {
+        const txs = await prisma.tx.findMany({ 
+            where: { id: { in: txIds } },
+            orderBy: { createdAt: 'desc' }
+        });
+        return txs;
+    },
+
     completeTransaction: async function (txId: string, fromAcc: { id: string }, toAcc: { id: string }, amountStr: string, currency: string) {
         await prisma.$transaction(async (trx) => {
             await trx.tx.update({ where: { id: txId }, data: { status: TxStatus.SUCCESS } });

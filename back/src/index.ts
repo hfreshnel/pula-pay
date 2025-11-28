@@ -11,6 +11,7 @@ import YAML from "yamljs"
 import { z } from 'zod';
 
 import accountService from "./services/accountService.js";
+import ledgerEntryService from "./services/ledgerEntryService.js";
 import userService from "./services/userService.js";
 import txService from "./services/txService.js";
 import { getRequestToPayStatus, getCollectionToken, requestToPay, transfer, getDisbursementsToken, getTransfertStatus } from './momo.js';
@@ -19,7 +20,7 @@ import verifyAuth from "./middleware/verifyAuth.js";
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: process.env.FRONT_URL })); //CODE SMELL
+app.use(cors({ origin: process.env.FRONT_URL }));
 const port = process.env.PORT || 3000;
 
 // Swagger setup
@@ -179,6 +180,29 @@ app.get("/transactions/:txId", async (req, res) => {
             return res.status(400).json({ error: 'Invalid transaction ID' });
         }
 
+        res.status(500).json({
+            error: 'Internal server error',
+            message: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
+    }
+});
+
+app.get("/users/:userId/transactions", async (req, res) => {
+    try {
+        const schema = z.object({ userId: z.string().uuid() });
+        const { userId } = schema.parse({ userId: req.params.userId  });
+
+        const userAccounts = await accountService.getUserAccounts(userId);
+        const accountIds = userAccounts.map(acc => acc.id);
+        const ledgerEntries = await ledgerEntryService.getLedgerEntriesForAccount(accountIds);
+        const txIds = ledgerEntries.map(le => le.txId);
+        const txs = await txService.getTxs(txIds);
+        res.json({ txs });
+    } catch (err: any) {
+        req.log.error({ err, userId: req.params.userId }, 'Get user transactions error');
+        if (err instanceof z.ZodError) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
         res.status(500).json({
             error: 'Internal server error',
             message: process.env.NODE_ENV === 'development' ? err.message : undefined

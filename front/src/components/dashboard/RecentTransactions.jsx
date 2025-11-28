@@ -18,19 +18,21 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { useAuthContext } from "@/components/common/AuthContext";
+import { useTransactions } from "@/hooks/useTransactions";
 
-const getTransactionIcon = (type, status) => {
+const getTransactionIcon = (kind) => {
+  // entry kinds: DEPOSIT, WITHDRAWAL, TRANSFER, REFUND, FEE, ADJUSTMENT
   const iconMap = {
-    recharge_credit: Smartphone,
-    recharge_data: Wifi,
-    p2p_transfer: Send,
-    wallet_topup: ArrowDownRight,
-    wallet_withdrawal: ArrowUpRight,
-    transfer_money: Send,
-    bill_payment: Receipt
+    DEPOSIT: ArrowDownRight,
+    WITHDRAWAL: ArrowUpRight,
+    TRANSFER: Send,
+    REFUND: ArrowDownRight,
+    FEE: Receipt,
+    ADJUSTMENT: MoreHorizontal
   };
-  
-  return iconMap[type] || ArrowUpRight;
+
+  return iconMap[String(kind).toUpperCase()] || ArrowUpRight;
 };
 
 const getStatusColor = (status) => {
@@ -46,35 +48,56 @@ const getStatusColor = (status) => {
   }
 };
 
-const getTransactionGradient = (type) => {
+const getTransactionGradient = (kind) => {
   const gradients = {
-    recharge_credit: "from-yellow-400 to-orange-500",
-    recharge_data: "from-blue-400 to-blue-600",
-    p2p_transfer: "from-purple-400 to-purple-600",
-    wallet_topup: "from-emerald-400 to-emerald-600",
-    wallet_withdrawal: "from-red-400 to-red-600",
-    transfer_money: "from-green-400 to-green-600",
-    bill_payment: "from-indigo-400 to-indigo-600"
+    DEPOSIT: "from-emerald-400 to-emerald-600",
+    WITHDRAWAL: "from-red-400 to-red-600",
+    TRANSFER: "from-green-400 to-green-600",
+    REFUND: "from-blue-400 to-blue-600",
+    FEE: "from-yellow-400 to-orange-500",
+    ADJUSTMENT: "from-indigo-400 to-indigo-600"
   };
-  return gradients[type] || "from-neutral-400 to-neutral-600";
+  return gradients[String(kind).toUpperCase()] || "from-neutral-400 to-neutral-600";
 };
 
-const formatTransactionType = (type) => {
+const formatTransactionType = (kind) => {
   const types = {
-    recharge_credit: "Recharge crédit",
-    recharge_data: "Forfait Internet",
-    transfer_money: "Transfert",
-    bill_payment: "Facture",
-    wallet_topup: "Recharge portefeuille",
-    p2p_transfer: "Transfert PulaPay",
-    wallet_withdrawal: "Retrait portefeuille"
+    DEPOSIT: "Dépôt",
+    WITHDRAWAL: "Retrait",
+    TRANSFER: "Transfert",
+    REFUND: "Remboursement",
+    FEE: "Frais",
+    ADJUSTMENT: "Ajustement"
   };
-  return types[type] || type;
+  return types[String(kind).toUpperCase()] || String(kind);
 };
 
-export default function RecentTransactions({ transactions }) {
-  // Protection contre les props manquantes
-  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+export default function RecentTransactions({ transactions: transactionsProp }) {
+  // prefer hook-provided transactions, fallback to prop
+  const { user } = useAuthContext();
+  const { transactions: hookTxs, loading, error, getTransactions } = useTransactions();
+
+  // load transactions for the logged-in user
+  const userId = user?.id;
+  React.useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      try {
+        await getTransactions(userId);
+      } catch (e) {
+        // handled by hook
+      }
+    })();
+  }, [userId, getTransactions]);
+
+  const source = Array.isArray(hookTxs) && hookTxs.length ? hookTxs : (Array.isArray(transactionsProp) ? transactionsProp : []);
+
+  // create a safe array and sort by createdAt/created_date desc
+  const safeTransactions = Array.from(source).sort((a, b) => {
+    const aDate = a?.createdAt ? new Date(a.createdAt) : (a?.created_date ? new Date(a.created_date) : new Date(0));
+    const bDate = b?.createdAt ? new Date(b.createdAt) : (b?.created_date ? new Date(b.created_date) : new Date(0));
+    return bDate - aDate;
+  });
   
   if (safeTransactions.length === 0) {
     return (
@@ -112,12 +135,12 @@ export default function RecentTransactions({ transactions }) {
       </CardHeader>
       <CardContent className="p-0">
         <div className="space-y-0">
-          {safeTransactions.slice(0, 5).map((transaction, index) => {
+          {safeTransactions.slice(0, 3).map((transaction, index) => {
             if (!transaction?.id) return null;
             
-            const IconComponent = getTransactionIcon(transaction.type, transaction.status);
-            const transactionDate = transaction.created_date ? new Date(transaction.created_date) : new Date();
-            const gradient = getTransactionGradient(transaction.type);
+                const IconComponent = getTransactionIcon(transaction.kind);
+                const transactionDate = transaction.createdAt ? new Date(transaction.createdAt) : (transaction.created_date ? new Date(transaction.created_date) : new Date());
+                const gradient = getTransactionGradient(transaction.kind);
             
             return (
               <div
@@ -130,26 +153,26 @@ export default function RecentTransactions({ transactions }) {
                   </div>
                   <div>
                     <p className="font-semibold text-neutral-900 text-sm">
-                      {formatTransactionType(transaction.type)}
+                      {formatTransactionType(transaction.kind)}
                     </p>
                     <div className="flex items-center gap-3 mt-1">
                       <p className="text-xs text-neutral-500">
                         {format(transactionDate, "dd MMM HH:mm", { locale: fr })}
                       </p>
-                      {transaction.operator && (
+                      {(transaction.operator || (transaction.meta && transaction.meta.operator)) && (
                         <Badge variant="outline" className="text-xs px-2 py-0.5">
-                          {transaction.operator}
+                          {transaction.operator || (transaction.meta && transaction.meta.operator)}
                         </Badge>
                       )}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-neutral-900 text-sm">
-                    {new Intl.NumberFormat("fr-FR").format(transaction.amount || 0)} XOF
+                    <p className="font-bold text-neutral-900 text-sm">
+                    {new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(Number(transaction.amount || 0))} {transaction.currency || 'XOF'}
                   </p>
-                  <Badge className={`${getStatusColor(transaction.status)} border text-xs mt-1`}>
-                    {transaction.status}
+                  <Badge className={`${getStatusColor(String(transaction.status || '').toLowerCase())} border text-xs mt-1`}>
+                    {String(transaction.status || '').toLowerCase()}
                   </Badge>
                 </div>
               </div>
