@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Wallet, CreditCard, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
+import { Wallet, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import PhoneInput from "react-phone-input-2";
 import { createPageUrl } from "@/utils";
@@ -16,11 +16,21 @@ export default function TopUp() {
 	const [method, setMethod] = useState("MTN_MoMo");
 	const [phone, setPhone] = useState("");
 	const [amount, setAmount] = useState("");
-	const [isWaiting, setIsWaiting] = useState(false);
+	// local waiting flag removed: rely on `loading` / `status` from useDeposit
 
 	const [submittedTx, setSubmittedTx] = useState(null);
 	const { txId, status, loading, error, startDeposit } = useDeposit();
 	const { user } = useAuthContext();
+
+	// format amount string like "1234.56" -> "1 234,56 €"
+	const formatCurrencyFromString = (amtStr) => {
+		if (!amtStr) return "";
+		const parts = amtStr.split('.');
+		const intPart = parts[0] || '0';
+		const decPart = (parts[1] || '00').padEnd(2, '0').slice(0,2);
+		const intWithSep = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+		return `${intWithSep},${decPart} €`;
+	};
 
 	useEffect(() => {
 		if (user.phone) {
@@ -30,7 +40,6 @@ export default function TopUp() {
 
 	useEffect(() => {
 		if (status === "SUCCESS" && !submittedTx) {
-			setIsWaiting(false);
 			setSubmittedTx({
 				amount,
 				recipient_phone: phone,
@@ -42,22 +51,33 @@ export default function TopUp() {
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		setIsWaiting(true);
 
-		//const operator = method.includes("MTN") ? "MTN" : method.includes("Moov") ? "Moov" : undefined;
-		if (method === "MTN_MoMo") {
-			await startDeposit({ userId: user.id, amount: String(amount), msisdn: phone, currency: "EUR" });
-		} else {
-			alert("Méthode non encore supportée");
+		// amount validation is handled by the backend; send amount string as-is
+
+		if (!user?.id) {
+			alert("Utilisateur non authentifié");
+			return;
+		}
+
+		try {
+			if (method === "MTN_MoMo") {
+				// send amount as string with two decimals
+				await startDeposit({ userId: user.id, amount: amount, msisdn: phone, currency: "EUR" });
+			} else {
+				alert("Méthode non encore supportée");
+			}
+		} catch (err) {
+			console.error("Erreur dépôt:", err);
 		}
 	};
 
 	const canUpdate = () => {
-		return (status === null);
+		// allow updates unless a deposit is currently pending
+		return status !== "PENDING";
 	}
 
 	const canSubmit = () => {
-		if (loading || isWaiting || !canUpdate()) return false;
+		if (loading || !canUpdate()) return false;
 		return Boolean(phone && amount);
 	};
 
@@ -78,7 +98,7 @@ export default function TopUp() {
 								<div className="font-medium">{submittedTx.method}</div>
 								<div className="text-neutral-500">Montant</div>
 								<div className="font-medium">
-									{new Intl.NumberFormat('fr-FR').format(submittedTx.amount)} EUR
+									{formatCurrencyFromString(submittedTx.amount)}
 								</div>
 								<div className="text-neutral-500">Numéro</div>
 								<div className="font-medium">{submittedTx.recipient_phone}</div>
@@ -114,14 +134,14 @@ export default function TopUp() {
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
 							<Wallet className="w-5 h-5" />
-							"Via MoMo ou Moov Money"
+							Via MoMo ou Moov Money
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<form onSubmit={handleSubmit} className="space-y-5">
 							<div className="grid gap-2">
 								<Label>Méthode</Label>
-								<Select value={method} onValueChange={setMethod} disabled={isWaiting}>
+								<Select value={method} onValueChange={setMethod} disabled={loading || status === "PENDING"}>
 									<SelectTrigger><SelectValue /></SelectTrigger>
 									<SelectContent>
 										<SelectItem value="MTN_MoMo">MTN MoMo</SelectItem>
@@ -135,7 +155,6 @@ export default function TopUp() {
 									country={"bj"}
 									value={phone}
 									disabled={true}
-									onChange={(value) => setPhone(value)}
 									inputProps={{
 										name: "phone",
 										required: true,
@@ -143,19 +162,16 @@ export default function TopUp() {
 									}}
 									inputClass="!w-full !py-2 !text-base !bg-gray-100 !cursor-not-allowed"
 									containerClass="!w-full"
-									required
 								/>
 							</div>
 
 							<div className="grid gap-2">
 								<Label>Montant (EUR)</Label>
 								<Input
-									type="number"
-									min="500"
-									step="100"
-									placeholder="Ex: 10000"
+									type="text"
+									placeholder="Ex: 100.00"
 									value={amount}
-									disabled={isWaiting}
+									disabled={loading || status === "PENDING"}
 									onChange={(e) => setAmount(e.target.value)}
 								/>
 							</div>
