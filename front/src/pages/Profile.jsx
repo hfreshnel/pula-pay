@@ -36,6 +36,7 @@ const [settings, setSettings] = React.useState({
   two_factor_method: "SMS",
   transaction_pin: "****"
 });
+
   const [methods, setMethods] = React.useState([]);
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);

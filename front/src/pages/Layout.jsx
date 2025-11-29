@@ -1,6 +1,4 @@
-
-
-import React from "react";
+import { Outlet } from 'react-router-dom';
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
@@ -11,9 +9,6 @@ import {
   Settings,
   Shield,
   Bell,
-  PieChart,
-  Users,
-  Receipt,
   CreditCard,
   Building2
 } from "lucide-react";
@@ -28,7 +23,6 @@ import {
   SidebarHeader,
   SidebarFooter,
   SidebarProvider,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
@@ -315,7 +309,10 @@ export default function Layout({ children, currentPageName }) {
                 }
               >
                 <ErrorBoundary key={location.pathname}>
-                  {children}
+                    {/* Use react-router Outlet when this component is used as the element for nested routes.
+                      Keep compatibility with explicit children (legacy usage) by falling back to children if Outlet
+                      has no content. */}
+                    <Outlet />
                 </ErrorBoundary>
               </SafeComponent>
             </div>

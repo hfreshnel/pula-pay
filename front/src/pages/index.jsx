@@ -92,12 +92,15 @@ function PagesContent() {
     const currentPage = _getCurrentPage(location.pathname);
 
     return (
-        <Layout currentPageName={currentPage}>
-            <Routes>
-                <Route path="/" element={<RootRedirect />} />
+        <Routes>
+            <Route path="/" element={<RootRedirect />} />
 
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+            {/* Public routes - no app chrome */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            {/* App routes rendered inside the Layout (sidebar / header) */}
+            <Route element={<Layout currentPageName={currentPage} />}>
 
                 <Route path="/dashboard" element={
                     <ProtectedRoute>
@@ -194,11 +197,10 @@ function PagesContent() {
                         <Profile />
                     </ProtectedRoute>
                 } />
+            </Route>
 
-                <Route path="*" element={<RootRedirect />} />
-
-            </Routes>
-        </Layout>
+            <Route path="*" element={<RootRedirect />} />
+        </Routes>
     );
 }
 
