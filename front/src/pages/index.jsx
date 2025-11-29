@@ -95,11 +95,9 @@ function PagesContent() {
         <Routes>
             <Route path="/" element={<RootRedirect />} />
 
-            {/* Public routes - no app chrome */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
-            {/* App routes rendered inside the Layout (sidebar / header) */}
             <Route element={<Layout currentPageName={currentPage} />}>
 
                 <Route path="/dashboard" element={

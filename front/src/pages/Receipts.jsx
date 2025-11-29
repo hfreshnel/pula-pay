@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { Receipt, Transaction, User } from "@/api/entities";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,7 +16,7 @@ export default function ReceiptsPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  /*useEffect(() => {
     loadData();
   }, []);
 
@@ -45,11 +44,11 @@ export default function ReceiptsPage() {
       console.error("Erreur lors du chargement:", error);
     }
     setIsLoading(false);
-  };
+  };*/
 
   const generateMissingReceipts = async (transactions, existingReceipts, userId) => {
     // Identifier les transactions sans reçu
-    const existingTransactionIds = new Set(existingReceipts.map(r => r.transaction_id));
+    /*const existingTransactionIds = new Set(existingReceipts.map(r => r.transaction_id));
     const missingReceipts = transactions.filter(t => 
       t.status === "completed" && !existingTransactionIds.has(t.id)
     );
@@ -96,7 +95,7 @@ export default function ReceiptsPage() {
     if (missingReceipts.length > 0) {
       const updatedReceipts = await Receipt.filter({ user_id: userId }, "-created_date");
       setReceipts(updatedReceipts);
-    }
+    }*/
   };
 
   const filterReceipts = () => {

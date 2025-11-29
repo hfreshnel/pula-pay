@@ -1,11 +1,7 @@
 import React from "react";
-import { AnalysisMonthly } from "@/api/entities";
-import { AnalysisCategory } from "@/api/entities";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { toast } from "@/components/ui/use-toast"; // shadcn toast hook if available; fallback handled
 import { Download, Upload, RefreshCcw, PieChart as PieChartIcon, LineChart as LineChartIcon } from "lucide-react";
 import KPICards from "@/components/analysis/KPICards";
 import LineChartCard from "@/components/analysis/LineChartCard";
@@ -26,7 +22,7 @@ export default function AnalysisPage() {
 
   const fileRef = React.useRef(null);
 
-  React.useEffect(() => {
+  /*React.useEffect(() => {
     loadAll();
     const onOnline = () => setIsOffline(false);
     const onOffline = () => setIsOffline(true);
@@ -36,32 +32,32 @@ export default function AnalysisPage() {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
     };
-  }, []);
+  }, []);*/
 
-  React.useEffect(() => {
+  /*React.useEffect(() => {
     if (selectedMonth) {
       loadForMonth(selectedMonth);
     }
-  }, [selectedMonth]);
+  }, [selectedMonth]);*/
 
-  const loadAll = async () => {
+  /*const loadAll = async () => {
     const list = await AnalysisMonthly.list();
     const sorted = [...list].sort((a, b) => (a.month < b.month ? 1 : -1));
     setMonths(sorted);
     if (!selectedMonth && sorted.length > 0) setSelectedMonth(sorted[0].month);
-  };
+  };*/
 
-  const loadForMonth = async (month) => {
+  /*const loadForMonth = async (month) => {
     const monthly = (await AnalysisMonthly.filter({ month }))[0];
     setCurrentMonthly(monthly || null);
     const cats = await AnalysisCategory.filter({ analysis_month: month });
     setCategories(cats);
-  };
+  };*/
 
   const formatXOF = (n) => `${new Intl.NumberFormat("fr-FR").format(Number(n || 0))} XOF`;
 
   const recalcPercents = async (month, monthlyData, cats) => {
-    const revTotal = Number(monthlyData?.revenue_total || 0);
+    /*const revTotal = Number(monthlyData?.revenue_total || 0);
     const expTotal = Number(monthlyData?.expense_total || 0);
     for (const c of cats) {
       const parent = c.kind === "depense" ? expTotal : revTotal;
@@ -69,11 +65,11 @@ export default function AnalysisPage() {
       if (Math.abs((c.percent_of_parent || 0) - percent) > 0.05) {
         await AnalysisCategory.update(c.id, { percent_of_parent: percent });
       }
-    }
+    }*/
   };
 
   const recalcMonthlyFromCategories = async (month, monthlyData) => {
-    const cats = await AnalysisCategory.filter({ analysis_month: month });
+    /*const cats = await AnalysisCategory.filter({ analysis_month: month });
     const totalDep = cats.filter(c => c.kind === "depense").reduce((s, c) => s + Number(c.amount || 0), 0);
     const totalRev = cats.filter(c => c.kind === "revenu").reduce((s, c) => s + Number(c.amount || 0), 0);
     const savings = totalRev - totalDep;
@@ -84,11 +80,11 @@ export default function AnalysisPage() {
     });
     await recalcPercents(month, { expense_total: totalDep, revenue_total: totalRev }, cats);
     await loadForMonth(month);
-    await loadAll();
+    await loadAll();*/
   };
 
   const handleCreateMonthly = safeAction(async (payload) => {
-    if (isOffline) {
+    /*if (isOffline) {
       enqueueOperation({ entity: "AnalysisMonthly", action: "create", payload });
       const optimistic = { ...payload, id: `tmp-${Date.now()}` };
       setMonths(prev => [optimistic, ...prev]);
@@ -98,11 +94,11 @@ export default function AnalysisPage() {
     }
     await AnalysisMonthly.create(payload);
     await loadAll();
-    setSelectedMonth(payload.month);
+    setSelectedMonth(payload.month);*/
   }, { onSuccess: () => {/* noop */} });
 
   const handleUpdateMonthly = safeAction(async (id, payload) => {
-    const toSave = { ...payload, savings_total: Number(payload.revenue_total || 0) - Number(payload.expense_total || 0) };
+    /*const toSave = { ...payload, savings_total: Number(payload.revenue_total || 0) - Number(payload.expense_total || 0) };
     if (isOffline) {
       enqueueOperation({ entity: "AnalysisMonthly", action: "update", payload: { id, data: toSave } });
       setCurrentMonthly(prev => ({ ...prev, ...toSave }));
@@ -111,11 +107,11 @@ export default function AnalysisPage() {
     }
     await AnalysisMonthly.update(id, toSave);
     await loadForMonth(payload.month || selectedMonth);
-    await loadAll();
+    await loadAll();*/
   });
 
   const createCategory = safeAction(async (payload) => {
-    if (isOffline) {
+    /*if (isOffline) {
       enqueueOperation({ entity: "AnalysisCategory", action: "create", payload });
       setCategories(prev => [{ ...payload, id: `tmp-${Date.now()}`, percent_of_parent: 0 }, ...prev]);
       return;
@@ -123,11 +119,11 @@ export default function AnalysisPage() {
     await AnalysisCategory.create(payload);
     await loadForMonth(payload.analysis_month);
     if (currentMonthly?.driven_by_categories) await recalcMonthlyFromCategories(payload.analysis_month, currentMonthly);
-    else await recalcPercents(payload.analysis_month, currentMonthly, await AnalysisCategory.filter({ analysis_month: payload.analysis_month }));
+    else await recalcPercents(payload.analysis_month, currentMonthly, await AnalysisCategory.filter({ analysis_month: payload.analysis_month }));*/
   });
 
   const updateCategory = safeAction(async (item, payload) => {
-    if (isOffline) {
+    /*/if (isOffline) {
       enqueueOperation({ entity: "AnalysisCategory", action: "update", payload: { id: item.id, data: payload } });
       setCategories(prev => prev.map(c => c.id === item.id ? { ...c, ...payload } : c));
       return;
@@ -135,11 +131,11 @@ export default function AnalysisPage() {
     await AnalysisCategory.update(item.id, payload);
     await loadForMonth(payload.analysis_month);
     if (currentMonthly?.driven_by_categories) await recalcMonthlyFromCategories(payload.analysis_month, currentMonthly);
-    else await recalcPercents(payload.analysis_month, currentMonthly, await AnalysisCategory.filter({ analysis_month: payload.analysis_month }));
+    else await recalcPercents(payload.analysis_month, currentMonthly, await AnalysisCategory.filter({ analysis_month: payload.analysis_month }));*/
   });
 
   const deleteCategory = safeAction(async (item) => {
-    if (isOffline) {
+    /*if (isOffline) {
       enqueueOperation({ entity: "AnalysisCategory", action: "delete", payload: { id: item.id } });
       setCategories(prev => prev.filter(c => c.id !== item.id));
       return;
@@ -147,7 +143,7 @@ export default function AnalysisPage() {
     await AnalysisCategory.delete(item.id);
     await loadForMonth(selectedMonth);
     if (currentMonthly?.driven_by_categories) await recalcMonthlyFromCategories(selectedMonth, currentMonthly);
-    else await recalcPercents(selectedMonth, currentMonthly, await AnalysisCategory.filter({ analysis_month: selectedMonth }));
+    else await recalcPercents(selectedMonth, currentMonthly, await AnalysisCategory.filter({ analysis_month: selectedMonth }));*/
   });
 
   const exportCSV = () => {
@@ -190,7 +186,7 @@ export default function AnalysisPage() {
   };
 
   const flushIfOnline = async () => {
-    if (!isOffline) {
+    /*if (!isOffline) {
       await flushQueue({
         AnalysisMonthly: {
           create: (p) => AnalysisMonthly.create(p),
@@ -204,14 +200,14 @@ export default function AnalysisPage() {
       });
       if (selectedMonth) await loadForMonth(selectedMonth);
       await loadAll();
-    }
+    }*/
   };
 
-  React.useEffect(() => {
+  /*React.useEffect(() => {
     if (!isOffline) {
       flushIfOnline();
     }
-  }, [isOffline]);
+  }, [isOffline]);*/
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-white p-4 md:p-8">

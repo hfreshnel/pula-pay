@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from "react";
-import { User, Transaction } from "@/api/entities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,20 +20,20 @@ export default function Recharge() {
   const [submitting, setSubmitting] = useState(false);
   const [createdTx, setCreatedTx] = useState(null);
 
-  useEffect(() => {
+  /*useEffect(() => {
     loadUser();
-  }, []);
+  }, []);*/
 
-  const loadUser = async () => {
+  /*const loadUser = async () => {
     const me = await User.me();
     if (me?.phone) setPhone(me.phone);
-  };
+  };*/
 
   const reference = () => `PLA${new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0,14)}`;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
+    /*setSubmitting(true);
 
     const ref = reference();
     const tx = await Transaction.create({
@@ -59,7 +58,7 @@ export default function Recharge() {
     }
 
     setCreatedTx(tx);
-    setSubmitting(false);
+    setSubmitting(false);*/
   };
 
   if (createdTx) {

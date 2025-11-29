@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { User, Transaction } from "@/api/entities";
 import WalletSummary from "../components/dashboard/WalletSummary";
 import RecentTransactions from "../components/dashboard/RecentTransactions";
 import { Button } from "@/components/ui/button";

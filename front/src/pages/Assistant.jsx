@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import { User } from "@/api/entities";
-import { InvokeLLM } from "@/api/integrations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,16 +36,16 @@ export default function Assistant() {
   const [currentUser, setCurrentUser] = useState(null);
   const messagesEndRef = useRef(null);
 
-  useEffect(() => {
+  /*useEffect(() => {
     loadUser();
     initializeAssistant();
-  }, []);
+  }, []);*/
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const loadUser = async () => {
+  /*const loadUser = async () => {
     try {
       const user = await User.me();
       setCurrentUser(user);
@@ -55,7 +53,7 @@ export default function Assistant() {
     } catch (error) {
       console.error("Erreur de chargement utilisateur:", error);
     }
-  };
+  };*/
 
   const initializeAssistant = () => {
     const welcomeMessage = {
@@ -74,7 +72,7 @@ export default function Assistant() {
   const handleSendMessage = async (messageContent = inputMessage) => {
     if (!messageContent.trim()) return;
 
-    const userMessage = {
+    /*const userMessage = {
       id: Date.now(),
       type: "user",
       content: messageContent,
@@ -122,14 +120,14 @@ export default function Assistant() {
       setMessages(prev => [...prev, errorMessage]);
     }
 
-    setIsLoading(false);
+    setIsLoading(false);*/
   };
 
   const handleLanguageChange = async (language) => {
-    setCurrentLanguage(language);
+    /*setCurrentLanguage(language);
     if (currentUser) {
       await User.updateMyUserData({ preferred_language: language });
-    }
+    }*/
   };
 
   const handleKeyPress = (e) => {
