@@ -1,0 +1,16 @@
+{
+  "app": {
+    "name": "MoMo App"
+  },
+  "login": {
+    "title": "Connexion",
+    "phone": "Numéro de téléphone",
+    "password": "Mot de passe",
+    "button": "Se connecter",
+    "goToRegister": "Créer un compte"
+  },
+  "home": {
+    "welcome": "Bienvenue, {{phone}}",
+    "balance": "Solde"
+  }
+}
