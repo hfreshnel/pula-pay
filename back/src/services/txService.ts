@@ -4,7 +4,8 @@ import accountService from './accountService.js';
 const prisma = new PrismaClient();
 
 const txService = {
-    createDeposit: async function (idempotencyKey: string, currency: string, amount: any, userId: string, msisdn: string) {
+    createDeposit: async function ({ idempotencyKey, currency, amount, userId, msisdn }:
+        {idempotencyKey: string, currency: string, amount: any, userId: string, msisdn: string}) {
         const tx = await prisma.tx.create({
             data: {
                 idempotencyKey: idempotencyKey,
@@ -18,7 +19,8 @@ const txService = {
         return tx.id;
     },
 
-    createWithdraw: async function (idempotencyKey: string, currency: string, amount: any, userId: string, msisdn: string) {
+    createWithdraw: async function ({ idempotencyKey, currency, amount, userId, msisdn }:
+        {idempotencyKey: string, currency: string, amount: any, userId: string, msisdn: string}) {
         const tx = await prisma.tx.create({
             data: {
                 idempotencyKey: idempotencyKey,
@@ -86,7 +88,7 @@ const txService = {
                 data: { status: TxStatus.SUCCESS }
             });
 
-            return updateTx;
+            return updateTx.id;
         })
     },
 
