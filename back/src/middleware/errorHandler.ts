@@ -1,6 +1,7 @@
-import { error } from "console";
 import { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
+
+import { AppError } from "../errors/AppErrors.js";
 
 export function errorHandler(err: any, req: Request, res: Response, _next: NextFunction) {
     req.log?.error?.({ err }, "Unhandle error");
@@ -10,7 +11,7 @@ export function errorHandler(err: any, req: Request, res: Response, _next: NextF
     }
 
     //Erreurs métier
-    if (err.name === "AppError") {
+    if (err instanceof AppError) {
         return res.status(err.statusCode ?? 400).json({ error: err.message, code: err.code });
     }
 

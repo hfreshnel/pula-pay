@@ -22,6 +22,7 @@ app.use("/health", healthRouter);
 app.use("/", userRouter);
 app.use("/auth", authRouter);
 app.use("/wallet", walletRouter);
+
 app.use(errorHandler);
 
 export default app;
