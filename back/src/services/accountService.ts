@@ -28,7 +28,15 @@ const accountService = {
     },
 
     getUserAccount: async function (userId: string, currency: string) {
-        return await prisma.account.findUnique({ where: { userId_currency_kind: { userId, currency, kind: "USER" } } });;
+        return await prisma.account.findUnique({
+            where: {
+                userId_currency_kind: {
+                    userId,
+                    currency,
+                    kind: "USER"
+                }
+            }
+        });
     },
 
     getAccountBalance: async function (accountId: string) {
@@ -42,6 +50,13 @@ const accountService = {
         const sumDebit = agg[0]._sum.debit ?? new Prisma.Decimal(0);
 
         return sumCredit.minus(sumDebit);
+    },
+
+    getUserAccounts: async function (userId: string) {
+        return await prisma.account.findMany({
+            where: { userId, kind: "USER" },
+            select: { id: true }
+        });
     }
 }
 
