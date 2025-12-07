@@ -1,6 +1,11 @@
-import { Tabs } from "expo-router";
+import { Tabs, Redirect } from "expo-router";
+import { useAuthStore } from "../../store/authStore";
 
 export default function MainLayout() {
+    const status = useAuthStore((s) => s.status);
+    if (status !== "authenticated") {
+        return <Redirect href="/(auth)/login" />;
+    }
     return (
         <Tabs screenOptions={{ headerShown: false }}>
             <Tabs.Screen name="dashboard" options={{ title: "Dashboard" }} />

@@ -1,9 +1,9 @@
 import { Redirect } from "expo-router";
 import { useAuthStore } from "../store/authStore";
 
-export default function Index(){
-    const token = useAuthStore((s) => s.token);
+export default function Index() {
+    const status = useAuthStore((s) => s.status);
 
-    if (!token) return <Redirect href="/(auth)/login" />;
-    return <Redirect href="/(main)/dashboard" />;
+    if (status === "authenticated") return <Redirect href="/(main)/dashboard" />;
+    return <Redirect href="/(auth)/login" />;
 }
