@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, Alert, ActivityIndicator, StyleSheet } from 'react-native';
-import { useAuthStore } from '../../store/authStore';
-import { useDeposit } from '../../hooks/use-deposit';
+import { useAuthStore } from '../../../store/authStore';
+import { useDeposit } from '../../../hooks/use-deposit';
 import PhoneInput from 'react-native-international-phone-number';
+import Screen from '@/src/components/screen';
+import { router } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 
 export default function Deposit() {
     const [method, setMethod] = useState('MTN_MoMo');
@@ -48,29 +51,33 @@ export default function Deposit() {
 
     if (submittedTx) {
         return (
-            <View style={styles.container}>
-                <Text style={styles.successTitle}>Recharge portefeuille effectué</Text>
-                <View style={styles.detailsContainer}>
-                    <Text style={styles.label}>Méthode:</Text>
-                    <Text style={styles.value}>{submittedTx.method}</Text>
-                    <Text style={styles.label}>Montant:</Text>
-                    <Text style={styles.value}>{submittedTx.amount} €</Text>
-                    <Text style={styles.label}>Numéro:</Text>
-                    <Text style={styles.value}>{submittedTx.recipient_phone}</Text>
-                    {submittedTx.txId && (
-                        <>
-                            <Text style={styles.label}>txId:</Text>
-                            <Text style={styles.value}>{submittedTx.txId}</Text>
-                        </>
-                    )}
+            <Screen>
+                <ArrowLeft onPress={() => router.replace("/(main)/wallet")} />
+                <View style={styles.container}>
+                    <Text style={styles.successTitle}>Recharge portefeuille effectué</Text>
+                    <View style={styles.detailsContainer}>
+                        <Text style={styles.label}>Méthode:</Text>
+                        <Text style={styles.value}>{submittedTx.method}</Text>
+                        <Text style={styles.label}>Montant:</Text>
+                        <Text style={styles.value}>{submittedTx.amount} €</Text>
+                        <Text style={styles.label}>Numéro:</Text>
+                        <Text style={styles.value}>{submittedTx.recipient_phone}</Text>
+                        {submittedTx.txId && (
+                            <>
+                                <Text style={styles.label}>txId:</Text>
+                                <Text style={styles.value}>{submittedTx.txId}</Text>
+                            </>
+                        )}
+                    </View>
+                    <Button title="Voir transactions" onPress={() => { router.push("/history") }} />
                 </View>
-                <Button title="Voir transactions" onPress={() => {/* Navigate to Transactions */ }} />
-            </View>
+            </Screen>
         );
     }
 
     return (
-        <View style={styles.container}>
+        <Screen>
+            <ArrowLeft onPress={() => router.replace("/(main)/wallet")} />
             <Text style={styles.title}>Recharger le portefeuille</Text>
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Méthode</Text>
@@ -83,10 +90,9 @@ export default function Deposit() {
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Numéro associé</Text>
                 <PhoneInput
-                    value={phone}
+                    value={phone.slice(3)}
                     defaultCountry="BJ"
                     disabled
-                    style={styles.input}
                 />
             </View>
             <View style={styles.inputGroup}>
@@ -106,7 +112,8 @@ export default function Deposit() {
             />
             {loading && <ActivityIndicator style={styles.loader} />}
             {error && <Text style={styles.error}>{String(error)}</Text>}
-        </View>
+        </Screen>
+
     );
 }
 

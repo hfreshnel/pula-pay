@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, Alert, ActivityIndicator, StyleSheet } from 'react-native';
-import PhoneInput from 'react-native-international-phone-number';
-import { useRecipientId } from '../../hooks/use-reccipient-id';
-import { useTransfer } from '../../hooks/use-transfert';
-import { useAuthStore } from '../../store/authStore';
+import PhoneInput, { ICountry } from 'react-native-international-phone-number';
+import { useRecipientId } from '../../../hooks/use-recipient-id';
+import { useTransfer } from '../../../hooks/use-transfert';
+import { useAuthStore } from '../../../store/authStore';
+import { sanitizeCountryCode, sanitizePhoneNumber } from "@/src/utils/phone";
+import Screen from '@/src/components/screen';
+import { ArrowLeft } from 'lucide-react-native';
+import { router } from 'expo-router';
 
 export default function Transfert() {
     const [queryPhone, setQueryPhone] = useState('');
     const [recipientPhone, setRecipientPhone] = useState('');
+    const [contryCode, setCountryCode] = useState<null | ICountry>(null);
     const [amount, setAmount] = useState('');
     const [note, setNote] = useState('');
     const [submittedTx, setSubmittedTx] = useState<{ amount: string; recipientPhone: string | null; txId: string | null; } | null>(null);
@@ -21,10 +26,11 @@ export default function Transfert() {
     useEffect(() => {
         if (!userId || !queryPhone) return;
         const handler = setTimeout(() => {
-            getPhoneUserId(userId, queryPhone.trim());
+            const formattedPhone = `${sanitizeCountryCode(contryCode?.idd.root as string)}${sanitizePhoneNumber(queryPhone)}`;
+            getPhoneUserId(userId, formattedPhone);
         }, 400);
         return () => clearTimeout(handler);
-    }, [userId, queryPhone, getPhoneUserId]);
+    }, [userId, queryPhone, getPhoneUserId, contryCode]);
 
     useEffect(() => {
         if (status === 'SUCCESS' && txId && txId !== ackTxId) {
@@ -39,9 +45,9 @@ export default function Transfert() {
 
     useEffect(() => {
         if (recipientId && !recipientPhone && queryPhone) {
-            setRecipientPhone(queryPhone.trim());
+            setRecipientPhone(`${sanitizeCountryCode(contryCode?.idd.root as string)}${sanitizePhoneNumber(queryPhone)}`);
         }
-    }, [recipientId, queryPhone, recipientPhone]);
+    }, [recipientId, queryPhone, recipientPhone, contryCode]);
 
     const handleSubmit = async () => {
         if (!recipientPhone || !amount || !recipientId || !userId) {
@@ -57,14 +63,16 @@ export default function Transfert() {
                 currency: 'EUR',
                 note,
             });
-        } catch (err: any) {
-            Alert.alert('Erreur transfert', err.message || 'Une erreur est survenue');
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
+            Alert.alert('Erreur transfert', errorMessage);
         }
     };
 
     if (submittedTx) {
         return (
-            <View style={styles.container}>
+            <Screen>
+                <ArrowLeft onPress={() => router.replace("/(main)/wallet")} />
                 <Text style={styles.successTitle}>Transfert P2P effectué</Text>
                 <View style={styles.detailsContainer}>
                     <Text style={styles.label}>Bénéficiaire:</Text>
@@ -74,13 +82,14 @@ export default function Transfert() {
                     <Text style={styles.label}>Référence:</Text>
                     <Text style={styles.value}>{submittedTx.txId}</Text>
                 </View>
-                <Button title="Nouveau transfert" onPress={() => setSubmittedTx(null)} />
-            </View>
+                <Button title="Voir transactions" onPress={() => { router.push("/history") }} />
+            </Screen>
         );
     }
 
     return (
-        <View style={styles.container}>
+        <Screen style={styles.container}>
+            <ArrowLeft onPress={() => router.replace("/(main)/wallet")} />
             <Text style={styles.title}>Transfert PulaPay → PulaPay</Text>
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Numéro du bénéficiaire</Text>
@@ -88,12 +97,12 @@ export default function Transfert() {
                     value={queryPhone}
                     onChangePhoneNumber={setQueryPhone}
                     defaultCountry="BJ"
-                    style={styles.input}
+                    onChangeSelectedCountry={setCountryCode}
                 />
                 {recipientId && !getPhoneUserIdError && (
                     <Text style={styles.successMessage}>Utilisateur trouvé: {queryPhone}</Text>
                 )}
-                {getPhoneUserIdError && (
+                {getPhoneUserIdError && queryPhone && (
                     <Text style={styles.error}>{getPhoneUserIdError}</Text>
                 )}
             </View>
@@ -123,7 +132,7 @@ export default function Transfert() {
             />
             {loading && <ActivityIndicator style={styles.loader} />}
             {error && <Text style={styles.error}>{String(error)}</Text>}
-        </View>
+        </Screen>
     );
 }
 

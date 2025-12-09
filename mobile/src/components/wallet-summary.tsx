@@ -40,7 +40,7 @@ export default function WalletSummary() {
         <View style={styles.card}>
             <LinearGradient colors={["#7c3aed", "#6d28d9"]} start={[0,0]} end={[1,1]} style={styles.header}>
                 <View style={styles.headerLeft}>
-                    <View style={styles.logoWrap}>
+                    <View >
                         <Wallet color="#fff" size={20} />
                     </View>
                     <Text style={styles.small}>Solde disponible</Text>
@@ -51,9 +51,9 @@ export default function WalletSummary() {
                             <Text style={styles.balance}>{maskedOrValue}</Text>
                         )}
                     </View>
-                    <View style={styles.metricsRow}>
+                    <View >
                         <TrendingUp color="#bbf7d0" size={14} />
-                        <Text style={styles.metricsText}>+2.5% ce mois</Text>
+                        <Text >+2.5% ce mois</Text>
                     </View>
                 </View>
 
@@ -61,27 +61,27 @@ export default function WalletSummary() {
                     <TouchableOpacity onPress={() => setShowBalance((s) => !s)} style={styles.iconButton}>
                         {showBalance ? <Eye color="#fff" size={18} /> : <EyeOff color="#fff" size={18} />}
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => getBalance(user?.id, currency)} style={styles.iconButton}>
+                    <TouchableOpacity onPress={() => getBalance(user?.id as string, currency)} style={styles.iconButton}>
                         <RotateCw color="#fff" size={18} />
                     </TouchableOpacity>
                 </View>
 
                 {/* decorative circles */}
-                <View style={styles.decorationTopRight} pointerEvents="none" />
-                <View style={styles.decorationBottomLeft} pointerEvents="none" />
+                <View pointerEvents="none" />
+                <View pointerEvents="none" />
             </LinearGradient>
 
             <View style={styles.actions}>
-                <TouchableOpacity style={[styles.actionBtn, styles.primary]} onPress={() => router.push('/deposit')}>
-                    <View style={styles.actionLeft}><Plus color="#fff" size={16} /></View>
+                <TouchableOpacity style={[styles.actionBtn, styles.primary]} onPress={() => router.push('/wallet/deposit')}>
+                    <View ><Plus color="#fff" size={16} /></View>
                     <Text style={styles.actionText}>Recharger</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionBtn, styles.success]} onPress={() => router.push('/transfert')}>
-                    <View style={styles.actionLeft}><ArrowUpRight color="#fff" size={16} /></View>
+                <TouchableOpacity style={[styles.actionBtn, styles.success]} onPress={() => router.push('/wallet/transfert')}>
+                    <View ><ArrowUpRight color="#fff" size={16} /></View>
                     <Text style={styles.actionText}>Envoyer</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionBtn, styles.warn]} onPress={() => router.push('/withdraw')}>
-                    <View style={styles.actionLeft}><ArrowDownRight color="#fff" size={16} /></View>
+                <TouchableOpacity style={[styles.actionBtn, styles.warn]} onPress={() => router.push('/wallet/withdraw')}>
+                    <View ><ArrowDownRight color="#fff" size={16} /></View>
                     <Text style={styles.actionText}>Retirer</Text>
                 </TouchableOpacity>
             </View>

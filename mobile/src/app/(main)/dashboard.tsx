@@ -1,5 +1,5 @@
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import Screen from "../../components/Screen";
+import Screen from "../../components/screen";
 import { useAuthStore } from "../../store/authStore";
 import { useTranslation } from "react-i18next";
 
@@ -10,7 +10,7 @@ import WalletSummary from "@/src/components/wallet-summary";
 
 export default function Dashboard() {
     const { t } = useTranslation();
-    const user = useAuthStore((s) => s.user);
+    const user: any = useAuthStore((s) => s.user);
     const logout = useAuthStore((s) => s.logout);
 
     console.log(`Dashboard user: ${user?.id}`);
@@ -19,53 +19,51 @@ export default function Dashboard() {
         : "Bonjour 👋";
 
     return (
-        <Screen>
-            <ScrollView contentContainerStyle={styles.container}>
-                <SafeComponent>
-                    <View style={styles.header}>
-                        <View>
-                            <Text style={styles.greeting}>{greeting}</Text>
-                            <Text style={styles.date}>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
-                        </View>
-                        <TouchableOpacity style={styles.notificationButton} onPress={() => { /* TODO: open notifications */ }}>
-                            <Text style={styles.notificationText}>🔔</Text>
-                        </TouchableOpacity>
+        <ScrollView contentContainerStyle={styles.container}>
+            <SafeComponent>
+                <View style={styles.header}>
+                    <View>
+                        <Text style={styles.greeting}>{greeting}</Text>
+                        <Text style={styles.date}>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
                     </View>
-                </SafeComponent>
+                    <TouchableOpacity style={styles.notificationButton} onPress={() => { /* TODO: open notifications */ }}>
+                        <Text style={styles.notificationText}>🔔</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeComponent>
 
-                <SafeComponent>
-                    <View style={{ width: '100%' }}>
-                        <WalletSummary />
-                    </View>
-                </SafeComponent>
+            <SafeComponent>
+                <View style={{ width: '100%' }}>
+                    <WalletSummary />
+                </View>
+            </SafeComponent>
 
-                <SafeComponent>
-                    <View style={{ width: '100%' }}>
-                        <QuickActions />
-                    </View>
-                </SafeComponent>
+            <SafeComponent>
+                <View style={{ width: '100%' }}>
+                    <QuickActions />
+                </View>
+            </SafeComponent>
 
-                {/* Promo card */}
-                <SafeComponent>
-                    <View style={styles.promoCard}>
-                        <View style={styles.promoLeft}>
-                            <Text style={styles.promoTitle}>Offre spéciale</Text>
-                            <Text style={styles.promoSubtitle}>5% de réduction sur les recharges aujourd'hui</Text>
-                        </View>
-                        <TouchableOpacity style={styles.promoButton} onPress={() => { /* TODO: promo action */ }}>
-                            <Text style={styles.promoButtonText}>Profiter</Text>
-                        </TouchableOpacity>
+            {/* Promo card */}
+            <SafeComponent>
+                <View style={styles.promoCard}>
+                    <View style={styles.promoLeft}>
+                        <Text style={styles.promoTitle}>Offre spéciale</Text>
+                        <Text style={styles.promoSubtitle}>5% de réduction sur les recharges aujourd'hui</Text>
                     </View>
-                </SafeComponent>
+                    <TouchableOpacity style={styles.promoButton} onPress={() => { /* TODO: promo action */ }}>
+                        <Text style={styles.promoButtonText}>Profiter</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeComponent>
 
-                <SafeComponent>
-                    <View style={{ width: '100%' }}>
-                        <RecentTransactions />
-                    </View>
-                </SafeComponent>
-                
-            </ScrollView>
-        </Screen>
+            <SafeComponent>
+                <View style={{ width: '100%' }}>
+                    <RecentTransactions />
+                </View>
+            </SafeComponent>
+
+        </ScrollView>
     );
 }
 

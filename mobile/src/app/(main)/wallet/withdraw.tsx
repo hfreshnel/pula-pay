@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, Alert, ActivityIndicator, StyleSheet } from 'react-native';
-import { useWithdraw } from '../../hooks/use-withdraw';
-import { useAuthStore } from '../../store/authStore';
+import { useWithdraw } from '../../../hooks/use-withdraw';
+import { useAuthStore } from '../../../store/authStore';
 import PhoneInput from 'react-native-international-phone-number';
+import Screen from '@/src/components/screen';
+import { ArrowLeft } from 'lucide-react-native';
+import { router } from 'expo-router';
 
 export default function Withdraw() {
     const [amount, setAmount] = useState('');
@@ -46,7 +49,8 @@ export default function Withdraw() {
 
     if (submittedTx) {
         return (
-            <View style={styles.container}>
+            <Screen>
+                <ArrowLeft onPress={() => router.replace("/(main)/wallet")} />
                 <Text style={styles.successTitle}>Retrait effectué</Text>
                 <View style={styles.detailsContainer}>
                     <Text style={styles.label}>Méthode:</Text>
@@ -63,12 +67,13 @@ export default function Withdraw() {
                     )}
                 </View>
                 <Button title="Voir transactions" onPress={() => {/* Navigate to Transactions */ }} />
-            </View>
+            </Screen>
         );
     }
 
     return (
-        <View style={styles.container}>
+        <Screen>
+            <ArrowLeft onPress={() => router.replace("/(main)/wallet")} />
             <Text style={styles.title}>Demande de retrait</Text>
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Montant à retirer (EUR)</Text>
@@ -91,10 +96,9 @@ export default function Withdraw() {
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>Numéro associé</Text>
                 <PhoneInput
-                    value={phone}
+                    value={phone.slice(3)}
                     defaultCountry="BJ"
                     disabled
-                    style={styles.input}
                 />
             </View>
             <Button
@@ -104,7 +108,7 @@ export default function Withdraw() {
             />
             {loading && <ActivityIndicator style={styles.loader} />}
             {error && <Text style={styles.error}>{String(error)}</Text>}
-        </View>
+        </Screen>
     );
 }
 

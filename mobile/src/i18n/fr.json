@@ -15,7 +15,8 @@
         "password": "Mot de passe",
         "confirmPassword": "Confirmer le mot de passe",
         "button": "S'inscrire",
-        "goToLogin": "Déjà un compte ? Se connecter"
+        "goToLogin": "Déjà un compte ? Se connecter",
+        "verifyButton": "Vérifier le code"
     },
     "home": {
         "welcome": "Bienvenue, {{phone}}",

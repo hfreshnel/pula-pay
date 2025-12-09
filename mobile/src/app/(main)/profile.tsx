@@ -1,5 +1,5 @@
 import { useAuthStore } from "../../store/authStore";
-import Screen from "../../components/Screen";
+import Screen from "../../components/screen";
 import Button from "../../components/ui/Button";
 
 export default function Profile() {
@@ -7,7 +7,6 @@ export default function Profile() {
 
   return (
     <Screen>
-      {/* ton contenu */}
       <Button title="Se déconnecter" onPress={logout} />
     </Screen>
   );

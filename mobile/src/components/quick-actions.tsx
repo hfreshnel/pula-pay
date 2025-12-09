@@ -53,14 +53,14 @@ export default function QuickActions() {
   const goTo = (page: string) => {
     // Simple mapping: use `/${page}` as path — adjust if your routes differ
     const path = `/${page}`;
-    router.push(path);
+    router.push("#");
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>Services</Text>
-        <TouchableOpacity onPress={() => router.push('/Services')}>
+        <TouchableOpacity onPress={() => router.push('#')}>
           <Text style={styles.seeAll}>Voir tout</Text>
         </TouchableOpacity>
       </View>

@@ -92,7 +92,7 @@ export default function RecentTransactions({ transactions: transactionsProp }: {
       <View style={styles.card}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Transactions récentes</Text>
-          <TouchableOpacity onPress={() => router.push('/Transactions')}>
+          <TouchableOpacity onPress={() => router.push('/history')}>
             <Text style={styles.seeAll}>Voir tout</Text>
           </TouchableOpacity>
         </View>
@@ -103,7 +103,7 @@ export default function RecentTransactions({ transactions: transactionsProp }: {
           </View>
           <Text style={styles.emptyTitle}>Aucune transaction</Text>
           <Text style={styles.emptySubtitle}>Vos transactions récentes apparaîtront ici</Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/Recharge')}>
+          <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/wallet/deposit')}>
             <Text style={styles.primaryButtonText}>Première transaction</Text>
           </TouchableOpacity>
         </View>
@@ -115,7 +115,7 @@ export default function RecentTransactions({ transactions: transactionsProp }: {
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>Activité récente</Text>
-        <TouchableOpacity onPress={() => router.push('/Transactions')}>
+        <TouchableOpacity onPress={() => router.push('/history')}>
           <Text style={styles.seeAll}>Voir tout</Text>
         </TouchableOpacity>
       </View>

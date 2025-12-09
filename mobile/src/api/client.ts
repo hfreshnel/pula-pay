@@ -16,4 +16,15 @@ client.interceptors.request.use((config) => {
     return config;
 });
 
+client.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error?.response?.status === 401) {
+      const logout = useAuthStore.getState().logout;
+      await logout();
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default client;

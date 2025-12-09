@@ -1,5 +1,7 @@
 import { Tabs, Redirect } from "expo-router";
 import { useAuthStore } from "../../store/authStore";
+import { StyleSheet } from "react-native";
+import { House, Wallet, History, ArrowLeftRight, Settings } from "lucide-react-native";
 
 export default function MainLayout() {
     const status = useAuthStore((s) => s.status);
@@ -7,13 +9,31 @@ export default function MainLayout() {
         return <Redirect href="/(auth)/login" />;
     }
     return (
-        <Tabs screenOptions={{ headerShown: false }}>
-            <Tabs.Screen name="dashboard" options={{ title: "Dashboard" }} />
-            <Tabs.Screen name="transfer" options={{ title: "Transfert" }} />
-            <Tabs.Screen name="deposit" options={{ title: "Dépôt" }} />
-            <Tabs.Screen name="withdraw" options={{ title: "Retrait" }} />
-            <Tabs.Screen name="transactions" options={{ title: "Transactions" }} />
-            <Tabs.Screen name="profile" options={{ title: "Profil" }} />
+        <Tabs screenOptions={{ headerShown: true }}>
+            <Tabs.Screen name="dashboard" options={{
+                title: "Home",
+                tabBarIcon: ({ color, size, focused }) => (
+                    <House color={focused ? "#7c3aed" : color} size={size} />
+                )
+            }} />
+            <Tabs.Screen name="wallet" options={{
+                title: "Wallet",
+                tabBarIcon: ({ color, size, focused }) => (
+                    <Wallet color={focused ? "#7c3aed" : color} size={size} />
+                )
+            }} />
+            <Tabs.Screen name="history" options={{
+                title: "History",
+                tabBarIcon: ({ color, size, focused }) => (
+                    <History color={focused ? "#7c3aed" : color} size={size} />
+                )
+            }} />
+            <Tabs.Screen name="profile" options={{
+                title: "Profil",
+                tabBarIcon: ({ color, size, focused }) => (
+                    <Settings color={focused ? "#7c3aed" : color} size={size} />
+                )
+            }} />
         </Tabs>
     );
 };
