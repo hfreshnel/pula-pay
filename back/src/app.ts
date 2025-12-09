@@ -19,7 +19,6 @@ const allowedOrigins = [
     "http://localhost:8081",
 ].filter(Boolean);
 
-app.use(express.json());
 app.use(cors({
     origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -31,6 +30,8 @@ app.use(cors({
     ],
     credentials: true,
 }));
+app.options("*", cors());
+app.use(express.json());
 app.use(pinoHttp({ logger }));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
