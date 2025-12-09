@@ -12,8 +12,25 @@ import walletRouter from "./modules/wallet/wallet.routes.js";
 
 const app = express();
 
+const allowedOrigins = [
+    process.env.FRONT_URL!,
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:8081",
+].filter(Boolean);
+
 app.use(express.json());
-app.use(cors({ origin: process.env.FRONT_URL }));
+app.use(cors({
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "X-Target-Environment",
+        "Ocp-Apim-Subscription-Key",
+    ],
+    credentials: true,
+}));
 app.use(pinoHttp({ logger }));
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
