@@ -1,6 +1,5 @@
 
-import React, { useState, useEffect } from "react";
-import { Service, Transaction } from "@/api/entities";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,6 @@ import { Switch } from "@/components/ui/switch";
 import { Receipt, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { callBackendFunction } from "@/components/backend"; // Corrected import path
 
 export default function Bills() {
   const [services, setServices] = useState([]);
@@ -21,19 +19,19 @@ export default function Bills() {
   const [submitting, setSubmitting] = useState(false);
   const [createdTx, setCreatedTx] = useState(null);
 
-  useEffect(() => { loadServices(); }, []);
+  /*useEffect(() => { loadServices(); }, []);
   const loadServices = async () => {
     const actives = await Service.filter({ category: "bills", is_active: true });
     setServices(actives);
     if (actives.length) setServiceId(actives[0].id);
-  };
+  };*/
 
   const service = services.find(s => s.id === serviceId);
   const reference = () => `PLA${new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0,14)}`;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
+    /*setSubmitting(true);
 
     const tx = await Transaction.create({
       type: "bill_payment",
@@ -58,7 +56,7 @@ export default function Bills() {
     }
 
     setCreatedTx(tx);
-    setSubmitting(false);
+    setSubmitting(false);*/
   };
 
   if (createdTx) {

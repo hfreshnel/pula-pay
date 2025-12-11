@@ -1,6 +1,5 @@
 
 import React, { useEffect, useState } from "react";
-import { Transaction } from "@/api/entities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,18 +8,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import { useAuthContext } from "@/components/common/AuthContext";
+import { useTransactions } from "@/hooks/useTransactions";
+
+
 const typeLabel = {
-  recharge_credit: "Recharge crédit",
+  transfert: "Recharge crédit",
   recharge_data: "Forfait Internet",
   transfer_money: "Transfert",
   bill_payment: "Facture",
-  wallet_topup: "Recharge portefeuille",
-  p2p_transfer: "Transfert PulaPay",
-  wallet_withdrawal: "Retrait portefeuille"
+  wallet_topup: "DEPOSIT",
+  p2p_transfer: "TRANSFER",
+  wallet_withdrawal: "WITHDRAWAL"
 };
 
 const statusBadge = (status) => {
-  switch (status) {
+  const s = String(status || '').toLowerCase();
+  switch (s) {
     case "completed": return "bg-emerald-50 text-emerald-700 border-emerald-200";
     case "pending": return "bg-orange-50 text-orange-700 border-orange-200";
     case "failed": return "bg-red-50 text-red-700 border-red-200";
@@ -29,24 +33,30 @@ const statusBadge = (status) => {
 };
 
 export default function TransactionsPage() {
-  const [items, setItems] = useState([]);
+  const { user } = useAuthContext();
+  const { transactions, loading, error, getTransactions } = useTransactions();
   const [q, setQ] = useState("");
   const [type, setType] = useState("all");
   const [status, setStatus] = useState("all");
-  const [isLoading, setIsLoading] = useState(true); // NEW
+  const userId = user?.id;
 
-  useEffect(() => { load(); }, []);
-  const load = async () => {
-    setIsLoading(true);
-    const list = await Transaction.list("-created_date", 100);
-    setItems(list);
-    setIsLoading(false);
-  };
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      try {
+        await getTransactions(userId);
+      } catch (err) {
+        console.error('getTransactions failed:', err);
+      }
+    })();
+  }, [userId, getTransactions]);
 
-  const filtered = items.filter(t => {
-    const matchesQ = !q || t.reference?.toLowerCase().includes(q.toLowerCase()) || t.description?.toLowerCase().includes(q.toLowerCase());
-    const matchesType = type === "all" || t.type === type;
-    const matchesStatus = status === "all" || t.status === status;
+  const filtered = (transactions || []).filter(t => {
+    const qLower = (q || '').trim().toLowerCase();
+    const metaStr = t.meta ? JSON.stringify(t.meta).toLowerCase() : '';
+    const matchesQ = !qLower || (t.externalId && String(t.externalId).toLowerCase().includes(qLower)) || (t.id && String(t.id).toLowerCase().includes(qLower)) || metaStr.includes(qLower);
+    const matchesType = type === "all" || String(t.kind) === type;
+    const matchesStatus = status === "all" || (t.status && String(t.status).toLowerCase() === status);
     return matchesQ && matchesType && matchesStatus;
   });
 
@@ -55,8 +65,12 @@ export default function TransactionsPage() {
       <div className="max-w-5xl mx-auto">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold">Historique des transactions</h1>
-          <Button variant="outline" onClick={load} disabled={isLoading}>
-            {isLoading ? "Rafraîchissement..." : "Rafraîchir"}
+          <Button
+            variant="outline"
+            onClick={async () => { await getTransactions(userId); }}
+            disabled={loading}
+          >
+            {loading ? "Rafraîchissement..." : "Rafraîchir"}
           </Button>
         </div>
 
@@ -94,7 +108,11 @@ export default function TransactionsPage() {
               </div>
             </div>
 
-            {isLoading ? (
+            {error && (
+              <div className="p-3 mb-3 rounded bg-red-50 text-red-700">Erreur: {String(error)}</div>
+            )}
+
+            {loading ? (
               <div className="w-full py-16 flex items-center justify-center">
                 <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
               </div>
@@ -105,7 +123,6 @@ export default function TransactionsPage() {
                     <TableRow className="bg-neutral-50">
                       <TableHead>Référence</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Opérateur</TableHead>
                       <TableHead>Montant</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Date</TableHead>
@@ -114,12 +131,11 @@ export default function TransactionsPage() {
                   <TableBody>
                     {filtered.map(t => (
                       <TableRow key={t.id}>
-                        <TableCell className="font-mono text-xs">{t.reference}</TableCell>
-                        <TableCell>{typeLabel[t.type] || t.type}</TableCell>
-                        <TableCell>{t.operator}</TableCell>
-                        <TableCell className="font-medium">{new Intl.NumberFormat('fr-FR').format(t.amount)} XOF</TableCell>
-                        <TableCell><Badge className={`${statusBadge(t.status)} border`}>{t.status}</Badge></TableCell>
-                        <TableCell>{new Date(t.created_date).toLocaleString("fr-FR")}</TableCell>
+                        <TableCell className="font-mono text-xs">{t.externalId || t.id}</TableCell>
+                        <TableCell>{typeLabel[t.kind] || t.kind}</TableCell>
+                        <TableCell className="font-medium">{new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(Number(t.amount))} {t.currency || 'XOF'}</TableCell>
+                        <TableCell><Badge className={`${statusBadge(t.status)} border`}>{String(t.status || '').toLowerCase()}</Badge></TableCell>
+                        <TableCell>{t.createdAt ? new Date(t.createdAt).toLocaleString("fr-FR") : (t.created_date ? new Date(t.created_date).toLocaleString("fr-FR") : '—')}</TableCell>
                       </TableRow>
                     ))}
                     {filtered.length === 0 && (

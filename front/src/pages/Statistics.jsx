@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { UserAnalysis, Transaction, User } from "@/api/entities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +14,7 @@ export default function StatisticsPage() {
   const [availableMonths, setAvailableMonths] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  /*useEffect(() => {
     loadData();
   }, []);
 
@@ -41,9 +40,9 @@ export default function StatisticsPage() {
       console.error("Erreur lors du chargement:", error);
     }
     setIsLoading(false);
-  };
+  };*/
 
-  const loadAnalysisForMonth = async (month) => {
+  /*const loadAnalysisForMonth = async (month) => {
     try {
       const analyses = await UserAnalysis.filter({ 
         user_id: currentUser.email, 
@@ -53,7 +52,7 @@ export default function StatisticsPage() {
     } catch (error) {
       console.error("Erreur lors du chargement de l'analyse:", error);
     }
-  };
+  };*/
 
   const formatAmount = (amount) => {
     return new Intl.NumberFormat('fr-FR').format(amount || 0);

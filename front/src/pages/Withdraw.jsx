@@ -4,47 +4,72 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Wallet, CheckCircle, Loader2, Info } from "lucide-react";
+import { ArrowLeft, Wallet, CheckCircle, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import PhoneInput from "react-phone-input-2";
 import { createPageUrl, sanitizeMsisdn } from "@/utils";
 
 import { useWithdraw } from "@/hooks/useWithdraw";
+import { useAuthContext } from "@/components/common/AuthContext";
 
 export default function Withdraw() {
-  const [me, setMe] = useState(null);
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("MTN_MoMo");
   const [phone, setPhone] = useState("");
 
-  const [isWaiting, setIsWaiting] = useState(false);
 
   const [submittedTx, setSubmittedTx] = useState(null);
   const { txId, status, loading, error, startWithdraw } = useWithdraw();
+  const { user } = useAuthContext();
+
+  useEffect(() => {
+    if (user?.phone) setPhone(user.phone);
+  }, [user]);
+
+  // helper: parse amount string like "1234.56" or "1234,56" into integer cents
+  const parseAmountToCents = (amtStr) => {
+    if (!amtStr) return 0;
+    const normalized = String(amtStr).replace(/\s+/g, '').replace(',', '.');
+    const parts = normalized.split('.');
+    const intPart = parts[0] || '0';
+    const decPart = (parts[1] || '00').padEnd(2, '0').slice(0,2);
+    const cents = parseInt(intPart, 10) * 100 + parseInt(decPart, 10);
+    return Number.isNaN(cents) ? 0 : cents;
+  };
+
+  // format amount string like "1234.56" -> "1 234,56 €"
+  const formatCurrencyFromString = (amtStr) => {
+    if (!amtStr) return "";
+    const parts = String(amtStr).replace(/\s+/g, '').replace(',', '.').split('.');
+    const intPart = parts[0] || '0';
+    const decPart = (parts[1] || '00').padEnd(2, '0').slice(0,2);
+    const intWithSep = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return `${intWithSep},${decPart} €`;
+  };
 
   useEffect(() => {
     if (status === "SUCCESS" && !submittedTx) {
-      setIsWaiting(false);
       setSubmittedTx({
         amount,
         recipient_phone: sanitizeMsisdn(phone),
         method,
         txId
       });
-    } else if (error) {
-      setIsWaiting(false);
     }
-  }, [status, submittedTx, amount, phone, method, txId, error]);
+  }, [status, submittedTx, amount, phone, method, txId]);
 
   const fee = () => {
-    const amt = Number(amount || 0);
-    // Exemple: 1% de frais, min 100 EUR, max 1500 EUR
-    const f = Math.min(Math.max(Math.round(amt * 0.01), 100), 1500);
-    return isNaN(f) ? 0 : f;
+    const cents = parseAmountToCents(amount);
+    // 1% fee in cents, min 100 EUR, max 1500 EUR (converted to cents)
+    const minFeeCents = 100 * 100;
+    const maxFeeCents = 1500 * 100;
+    const calculated = Math.round(cents / 100); // cents * 0.01 -> cents/100
+    const fCents = Math.min(Math.max(calculated, minFeeCents), maxFeeCents);
+    return isNaN(fCents) ? 0 : fCents / 100;
   };
 
   const canSubmit = () => {
-    const amt = Number(amount);
-    if (!amt) return false;
+    if (!amount) return false;
     if (method === "MTN_MoMo") {
       return Boolean(phone);
     }
@@ -53,16 +78,23 @@ export default function Withdraw() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsWaiting(true);
 
     const msisdn = sanitizeMsisdn(phone);
 
-    //const operator = method.includes("MTN") ? "MTN" : method.includes("Moov") ? "Moov" : undefined;
-    if (method === "MTN_MoMo") {
-      await startWithdraw({ userId: "d9c5a0b2-0f7c-4f3b-9a86-3f8f57b0b2a1", amount: String(amount), msisdn: msisdn, currency: "EUR" });
-    } else {
-      alert("Méthode non encore supportée");
-      setIsWaiting(false);
+    if (!user?.id) {
+      alert("Utilisateur non authentifié");
+      return;
+    }
+
+    try {
+      if (method === "MTN_MoMo") {
+        // send amount as string (backend validates/normalizes)
+        await startWithdraw({ userId: user.id, amount: amount, msisdn: msisdn, currency: "EUR" });
+      } else {
+        alert("Méthode non encore supportée");
+      }
+    } catch (err) {
+      console.error("Erreur retrait:", err);
     }
   };
 
@@ -83,7 +115,7 @@ export default function Withdraw() {
                 <div className="font-medium">{submittedTx.method}</div>
                 <div className="text-neutral-500">Montant</div>
                 <div className="font-medium">
-                  {new Intl.NumberFormat('fr-FR').format(submittedTx.amount)} EUR
+                  {formatCurrencyFromString(submittedTx.amount)}
                 </div>
                 <div className="text-neutral-500">Numéro</div>
                 <div className="font-medium">{submittedTx.recipient_phone}</div>
@@ -137,15 +169,13 @@ export default function Withdraw() {
               <div className="grid gap-2">
                 <Label>Montant à retirer (EUR)</Label>
                 <Input
-                  type="number"
-                  min="500"
-                  step="100"
-                  placeholder="Ex: 5000"
+                  type="text"
+                  placeholder="Ex: 100.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                 />
                 <p className="text-xs text-neutral-500">
-                  Frais estimés: {new Intl.NumberFormat("fr-FR").format(fee())} EUR
+                  Frais estimés: {new Intl.NumberFormat("fr-FR", { style: 'currency', currency: 'EUR' }).format(fee())}
                 </p>
               </div>
 
@@ -161,15 +191,21 @@ export default function Withdraw() {
 
               <div className="grid gap-2">
                 <Label>Numéro associé</Label>
-                <Input
-                  placeholder="+229XXXXXXXX"
+                <PhoneInput
+                  country={"bj"}
                   value={phone}
-                  disabled={isWaiting}
-                  onChange={(e) => setPhone(e.target.value)}
+                  disabled={true}
+                  inputProps={{
+                    name: "phone",
+                    required: true,
+                    readOnly: true,
+                  }}
+                  inputClass="!w-full !py-2 !text-base !bg-gray-100 !cursor-not-allowed"
+                  containerClass="!w-full"
                 />
               </div>
 
-              <Button type="submit" disabled={loading || !canSubmit() || isWaiting} className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white">
+              <Button type="submit" disabled={loading || !canSubmit()} className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white">
                 { (loading) ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Envoi...

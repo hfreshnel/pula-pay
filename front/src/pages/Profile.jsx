@@ -1,6 +1,6 @@
 import React from "react";
-import { User } from "@/api/entities";
-import { UserSettings, LinkedPaymentMethod } from "@/api/entities";
+import { useAuthContext } from "@/components/common/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,139 +9,65 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { UploadFile } from "@/api/integrations";
-import { Trash2, Edit, Plus, Shield, Smartphone, CreditCard, Building2, Image } from "lucide-react";
+import { Trash2, Edit, Plus, Smartphone, CreditCard, Building2, Image } from "lucide-react";
 import PaymentMethodForm from "../components/profile/PaymentMethodForm";
 
 export default function ProfilePage() {
-  const [me, setMe] = React.useState(null);
-  const [settings, setSettings] = React.useState(null);
+  const [me, setMe] = React.useState({
+  id: "user_123456",
+  full_name: "Jean Dupont1", 
+  email: "me@mail.com",
+  phone: "+22961234567"
+});
+
+const [settings, setSettings] = React.useState({
+  full_name: "Jean Dupont",
+  email: "test@mail.com",
+  phone_number: "+22961234567",
+  address: "123 Rue Exemple, Cotonou, Bénin",
+  preferred_language: "fr", 
+  default_currency: "XOF",
+  notifications_push: true,
+  notifications_email: false,
+  notifications_sms: true,
+  privacy_mask_balance: false,
+  privacy_mask_history: true,
+  two_factor_enabled: true,
+  two_factor_method: "SMS",
+  transaction_pin: "****"
+});
+
   const [methods, setMethods] = React.useState([]);
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+
+  const { logout } = useAuthContext();
+  const navigate = useNavigate();
 
   // Payment modal
   const [openPM, setOpenPM] = React.useState(false);
   const [editingPM, setEditingPM] = React.useState(null);
 
-  React.useEffect(() => {
-    load();
-  }, []);
-
-  const load = async () => {
-    setLoading(true);
-    const user = await User.me();
-    setMe(user);
-    const existing = await UserSettings.filter({ user_id: user.id });
-    let s = existing[0];
-    if (!s) {
-      s = await UserSettings.create({
-        user_id: user.id,
-        full_name: user.full_name || "",
-        email: user.email,
-        phone_number: user.phone || "",
-        preferred_language: "fr",
-        default_currency: "XOF",
-        kyc_verified: false
-      });
-    }
-    setSettings(s);
-    const m = await LinkedPaymentMethod.filter({ user_id: user.id }, "-created_date", 50);
-    setMethods(m);
-    setLoading(false);
-  };
-
   const handleProfileSave = async (e) => {
     e.preventDefault();
-    setSaving(true);
-    const form = new FormData(e.currentTarget);
-    const phone = form.get("phone_number");
-    const address = form.get("address");
-    const file = form.get("profile_picture");
-    let profile_picture_url = settings?.profile_picture_url;
-
-    if (file && file.size > 0) {
-      const { file_url } = await UploadFile({ file });
-      profile_picture_url = file_url;
-    }
-
-    const updated = await UserSettings.update(settings.id, {
-      phone_number: phone,
-      address,
-      profile_picture_url
-    });
-
-    await User.updateMyUserData({ phone });
-
-    setSettings(updated);
-    setSaving(false);
+    // todo: implement profile save
   };
 
   const handlePrefsSave = async (e) => {
     e.preventDefault();
-    setSaving(true);
-    const form = new FormData(e.currentTarget);
-    const preferred_language = form.get("preferred_language");
-    const default_currency = form.get("default_currency");
-    const notifications_push = form.get("notifications_push") === "on";
-    const notifications_email = form.get("notifications_email") === "on";
-    const notifications_sms = form.get("notifications_sms") === "on";
-    const privacy_mask_balance = form.get("privacy_mask_balance") === "on";
-    const privacy_mask_history = form.get("privacy_mask_history") === "on";
-    const two_factor_enabled = form.get("two_factor_enabled") === "on";
-    const two_factor_method = form.get("two_factor_method") || null;
-    const pin = form.get("transaction_pin")?.toString().trim();
-
-    const updated = await UserSettings.update(settings.id, {
-      preferred_language,
-      default_currency,
-      notifications_push,
-      notifications_email,
-      notifications_sms,
-      privacy_mask_balance,
-      privacy_mask_history,
-      two_factor_enabled,
-      two_factor_method: two_factor_enabled ? (two_factor_method || "SMS") : null,
-      transaction_pin: pin ? pin : settings.transaction_pin
-    });
-
-    // Synchroniser certaines préférences utiles côté User
-    await User.updateMyUserData({
-      preferred_language: preferred_language,
-      secondary_pin: pin && pin.length === 4 ? pin : undefined
-    });
-
-    setSettings(updated);
-    setSaving(false);
+    //todo: implement preferences save
   };
 
   const openAddPM = () => {
-    setEditingPM(null);
-    setOpenPM(true);
+    //todo: implement open add payment method
   };
 
   const handlePMSubmit = async (data) => {
-    if (editingPM) {
-      const upd = await LinkedPaymentMethod.update(editingPM.id, { ...editingPM, ...data });
-      setMethods(methods.map(m => m.id === editingPM.id ? upd : m));
-    } else {
-      const created = await LinkedPaymentMethod.create({
-        user_id: me.id,
-        type: data.type,
-        provider_name: data.provider_name,
-        account_number: data.account_number,
-        status: "active"
-      });
-      setMethods([created, ...methods]);
-    }
-    setOpenPM(false);
-    setEditingPM(null);
+    //todo: implement payment method submit
   };
 
   const deletePM = async (pm) => {
-    if (!confirm("Supprimer ce moyen de paiement ?")) return;
-    await LinkedPaymentMethod.delete(pm.id);
-    setMethods(methods.filter(m => m.id !== pm.id));
+    //todo: implement delete payment method
   };
 
   if (loading || !settings) {
@@ -163,9 +89,16 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-white p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900">Profil & Paramètres</h1>
-          <p className="text-neutral-500">Gérez votre compte, vos moyens de paiement et vos préférences</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-900">Profil & Paramètres</h1>
+            <p className="text-neutral-500">Gérez votre compte, vos moyens de paiement et vos préférences</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => { logout(); navigate('/login'); }} className="text-sm text-red-600">
+              Déconnexion
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="profile">

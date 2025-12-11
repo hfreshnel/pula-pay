@@ -1,16 +1,13 @@
 
-import React, { useState } from "react";
-import { Transaction } from "@/api/entities";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Send, CheckCircle, ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { callBackendFunction } from "@/components/backend"; // Corrected path
 
 export default function Transfer() {
   const [recipient, setRecipient] = useState("");
@@ -24,7 +21,7 @@ export default function Transfer() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
+    /*setSubmitting(true);
 
     const ref = reference();
     const tx = await Transaction.create({
@@ -51,7 +48,7 @@ export default function Transfer() {
     }
 
     setCreatedTx(tx);
-    setSubmitting(false);
+    setSubmitting(false);*/
   };
 
   if (createdTx) {

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { Contact, User } from "@/api/entities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,15 +30,15 @@ export default function ContactsPage() {
     notes: ""
   });
 
-  useEffect(() => {
+  /*useEffect(() => {
     loadData();
   }, []);
 
   useEffect(() => {
     filterContacts();
-  }, [contacts, searchQuery]);
+  }, [contacts, searchQuery]);*/
 
-  const loadData = async () => {
+  /*const loadData = async () => {
     try {
       const user = await User.me();
       setCurrentUser(user);
@@ -50,10 +49,10 @@ export default function ContactsPage() {
       console.error("Erreur lors du chargement:", error);
     }
     setIsLoading(false);
-  };
+  };*/
 
   const filterContacts = () => {
-    if (!searchQuery) {
+    /*if (!searchQuery) {
       setFilteredContacts(contacts);
       return;
     }
@@ -63,7 +62,7 @@ export default function ContactsPage() {
       contact.phone_number?.includes(searchQuery) ||
       contact.email?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    setFilteredContacts(filtered);
+    setFilteredContacts(filtered);*/
   };
 
   const resetForm = () => {
@@ -124,7 +123,7 @@ export default function ContactsPage() {
       transaction_count: 0
     };
 
-    try {
+    /*try {
       if (editingContact) {
         await Contact.update(editingContact.id, contactData);
       } else {
@@ -135,22 +134,22 @@ export default function ContactsPage() {
       loadData();
     } catch (error) {
       console.error("Erreur lors de la sauvegarde:", error);
-    }
+    }*/
   };
 
   const deleteContact = async (contact) => {
-    if (confirm(`Supprimer le contact ${contact.contact_name} ?`)) {
+    /*if (confirm(`Supprimer le contact ${contact.contact_name} ?`)) {
       try {
         await Contact.delete(contact.id);
         loadData();
       } catch (error) {
         console.error("Erreur lors de la suppression:", error);
       }
-    }
+    }*/
   };
 
   const toggleFavorite = async (contact) => {
-    try {
+    /*try {
       await Contact.update(contact.id, { 
         ...contact, 
         is_favorite: !contact.is_favorite 
@@ -158,7 +157,7 @@ export default function ContactsPage() {
       loadData();
     } catch (error) {
       console.error("Erreur lors de la mise à jour:", error);
-    }
+    }*/
   };
 
   if (isLoading) {

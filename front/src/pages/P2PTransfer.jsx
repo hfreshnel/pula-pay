@@ -1,64 +1,83 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, Search, User as UserIcon, Users, CheckCircle } from "lucide-react";
+import { ArrowLeft, Loader2, User as UserIcon, Users, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import PhoneInput from "react-phone-input-2";
 
 import { useRecipientId } from "@/hooks/useRecipientId";
 import { useTransfer } from "@/hooks/useTransfer";
+import { useAuthContext } from "@/components/common/AuthContext";
 
 export default function P2PTransfer() {
   const [queryPhone, setQueryPhone] = useState("");
   const [recipientPhone, setRecipientPhone] = useState(null);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [submittedTx, setSubmittedTx] = useState(null);
+  const [ackTxId, setAckTxId] = useState(null);
 
   const { recipientId, error: getPhoneUserIdError, getPhoneUserId } = useRecipientId();
   const { txId, status, loading, error, startTransfer } = useTransfer();
+  const { user } = useAuthContext();
+  const userId = user?.id;
 
-  const userId = "d9c5a0b2-0f7c-4f3b-9a86-3f8f57b0b2a1";
+  // format amount string like "1234.56" -> "1 234,56 €"
+  const formatCurrencyFromString = (amtStr) => {
+    if (amtStr == null) return "";
+    const parts = String(amtStr).replace(/\s+/g, '').replace(',', '.').split('.');
+    const intPart = parts[0] || '0';
+    const decPart = (parts[1] || '00').padEnd(2, '0').slice(0,2);
+    const intWithSep = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return `${intWithSep},${decPart} €`;
+  };
 
   useEffect(() => {
-    if (!userId || !queryPhone.trim()) return;
-
-    const fetchRecipient = async () => {
-      await getPhoneUserId(userId, queryPhone.trim());
-    };
-
-    fetchRecipient();
+    if (!userId || !queryPhone) return;
+    const handler = setTimeout(() => {
+      getPhoneUserId(userId, queryPhone.trim());
+    }, 400);
+    return () => clearTimeout(handler);
   }, [userId, queryPhone, getPhoneUserId]);
 
   useEffect(() => {
-    if (status === "SUCCESS" && !submittedTx) {
-      setSubmitting(false);
+    if (status === "SUCCESS" && txId && txId !== ackTxId) {
       setSubmittedTx({
         amount,
         recipientPhone: recipientPhone,
         txId
       });
+      setAckTxId(txId);
     }
-  }, [status, submittedTx, amount, recipientPhone, txId]);
+  }, [status, submittedTx, amount, recipientPhone, txId, ackTxId]);
 
   const quickAmounts = [1000, 2000, 5000, 10000, 20000];
 
+  // auto-select beneficiary when recipientId becomes available
+  useEffect(() => {
+    if (recipientId && !recipientPhone && queryPhone) {
+      setRecipientPhone(queryPhone.trim());
+    }
+  }, [recipientId, queryPhone, recipientPhone]);
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!recipientPhone || !amount || !recipientId) return;
+    if (!recipientPhone || !amount || !recipientId || !userId) return;
 
-    setSubmitting(true);
-
-    await startTransfer({
-      senderId: userId,
-      receiverId: recipientId,
-      amount: amount,
-      currency: "EUR"
-    });
+    try {
+      await startTransfer({
+        senderId: userId,
+        receiverId: recipientId,
+        amount: String(amount),
+        currency: "EUR",
+        note
+      });
+    } catch (err) {
+      console.error("Transfer error:", err);
+    }
   };
 
   const handleSelectRecipient = () => {
@@ -83,7 +102,7 @@ export default function P2PTransfer() {
                 <div className="text-neutral-500">Bénéficiaire</div>
                 <div className="font-medium">{recipientPhone}</div>
                 <div className="text-neutral-500">Montant</div>
-                <div className="font-medium">{new Intl.NumberFormat('fr-FR').format(submittedTx.amount)} EUR</div>
+                <div className="font-medium">{formatCurrencyFromString(submittedTx.amount)}</div>
                 <div className="text-neutral-500">Référence</div>
                 <div className="font-mono">{submittedTx.txId}</div>
                 <div className="text-neutral-500">Statut</div>
@@ -93,8 +112,14 @@ export default function P2PTransfer() {
                 <Link to={createPageUrl("Transactions")}><Button variant="outline">Voir transactions</Button></Link>
                 <Button
                   onClick={() => {
+                    // reset local page state for a fresh transfer
                     setSubmittedTx(null);
-                    setAmount(""); setNote("");
+                    setAmount("");
+                    setNote("");
+                    setRecipientPhone(null);
+                    setQueryPhone("");
+                    // acknowledge this txId so effect won't recreate submittedTx while status===SUCCESS
+                    setAckTxId(txId);
                   }} className="bg-gradient-to-r from-orange-500 to-red-500 text-white">Nouveau transfert</Button>
               </div>
             </CardContent>
@@ -124,7 +149,14 @@ export default function P2PTransfer() {
             </CardHeader>
             <CardContent className="space-y-6">
               <Label>Numéro du bénéficiaire</Label>
-              <Input placeholder="+229XXXXXXXX" value={queryPhone} onChange={(e) => setQueryPhone(e.target.value)} />
+              <PhoneInput
+                country={"bj"}
+                value={queryPhone}
+                onChange={(value) => setQueryPhone(value)}
+                inputProps={{ name: 'phone' }}
+                inputClass="!w-full !py-2 !text-base"
+                containerClass="!w-full"
+              />
               {recipientId && !getPhoneUserIdError ? (
                 <div className="p-3 border rounded-xl bg-neutral-50">
                   <div className="flex items-center justify-between">
@@ -183,11 +215,12 @@ export default function P2PTransfer() {
               )}
 
               <Button
-                disabled={submitting || !recipientPhone || !amount || loading}
+                type="button"
+                disabled={loading || !recipientPhone || !amount}
                 onClick={handleSubmit}
                 className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white"
               >
-                {submitting || loading ? (
+                {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Envoi...

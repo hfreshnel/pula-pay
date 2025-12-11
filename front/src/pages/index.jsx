@@ -32,13 +32,17 @@ import Receipts from "./Receipts";
 
 import Profile from "./Profile";
 
-import Register from "./Register.jsx";
+import Register from "./Register";
 
-import Login from "./Login.jsx";
+import Login from "./Login";
 
 import ProtectedRoute from "../components/common/ProtectedRoute";
 
+import { useAuthContext } from "@/components/common/AuthContext.jsx";
+
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+
+
 
 const PAGES = {
     Login: Login,
@@ -71,7 +75,15 @@ function _getCurrentPage(url) {
     }
 
     const pageName = Object.keys(PAGES).find(page => page.toLowerCase() === urlLastPart.toLowerCase());
-    return pageName || Object.keys(PAGES)[0];
+    return pageName || "Dashboard";
+}
+
+function RootRedirect() {
+    const { isAuthenticated, isLoading } = useAuthContext();
+
+    return isAuthenticated 
+        ? <Navigate to="/dashboard" replace />
+        : <Navigate to="/login" replace />;
 }
 
 // Create a wrapper component that uses useLocation inside the Router context
@@ -80,15 +92,13 @@ function PagesContent() {
     const currentPage = _getCurrentPage(location.pathname);
 
     return (
-        <Layout currentPageName={currentPage}>
-            <Routes>
-                <Route path="/" element={
-                    localStorage.getItem('authToken')
-                        ? <Navigate to="/dashboard" replace />
-                        : <Navigate to="/login" replace />
-                } />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+        <Routes>
+            <Route path="/" element={<RootRedirect />} />
+
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            <Route element={<Layout currentPageName={currentPage} />}>
 
                 <Route path="/dashboard" element={
                     <ProtectedRoute>
@@ -185,11 +195,10 @@ function PagesContent() {
                         <Profile />
                     </ProtectedRoute>
                 } />
+            </Route>
 
-                <Route path="*" element={<Navigate to="/" replace />} />
-
-            </Routes>
-        </Layout>
+            <Route path="*" element={<RootRedirect />} />
+        </Routes>
     );
 }
 

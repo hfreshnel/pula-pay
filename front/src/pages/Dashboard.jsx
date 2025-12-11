@@ -1,24 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { User, Transaction, Service } from "@/api/entities";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Smartphone, 
-  Wifi, 
-  Send, 
-  Receipt, 
-  Wallet,
-  TrendingUp,
-  Activity,
-  Plus,
-  ArrowRight,
-  AlertCircle,
-  Bell,
-  Gift,
-  Users,
-  PieChart
-} from "lucide-react";
+import { Receipt, Activity, AlertCircle, Bell, Gift, Users, PieChart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -26,7 +10,6 @@ import SafeComponent, { useSafeAsync } from "../components/common/SafeComponent"
 import QuickActions from "../components/dashboard/QuickActions";
 import WalletSummary from "../components/dashboard/WalletSummary";
 import RecentTransactions from "../components/dashboard/RecentTransactions";
-import ServicesGrid from "../components/dashboard/ServicesGrid";
 
 export default function Dashboard() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -37,31 +20,15 @@ export default function Dashboard() {
 
   // Chargement sécurisé des données avec protection d'erreur
   const { data: userData, loading: userLoading, error: userError, refetch: refetchUser } = useSafeAsync(async () => {
-    try {
-      return await User.me();
-    } catch (error) {
-      console.warn('[Dashboard] Error loading user:', error);
-      return null;
-    }
+    
   }, []);
 
   const { data: transactionData, loading: transactionLoading, refetch: refetchTransactions } = useSafeAsync(async () => {
-    try {
-      if (!userData?.email) return [];
-      return await Transaction.filter({ created_by: userData.email }, "-created_date", 5);
-    } catch (error) {
-      console.warn('[Dashboard] Error loading transactions:', error);
-      return [];
-    }
+    
   }, [userData]);
 
   const { data: serviceData, loading: serviceLoading, refetch: refetchServices } = useSafeAsync(async () => {
-    try {
-      return await Service.filter({ is_active: true });
-    } catch (error) {
-      console.warn('[Dashboard] Error loading services:', error);
-      return [];
-    }
+    
   }, []);
 
   useEffect(() => {
@@ -165,14 +132,14 @@ export default function Dashboard() {
         {/* Résumé du portefeuille moderne */}
         <SafeComponent>
           <div className="mb-8">
-            <WalletSummary user={currentUser} />
+            <WalletSummary />
           </div>
         </SafeComponent>
 
         {/* Actions rapides avec nouveau design */}
         <SafeComponent>
           <div className="mb-8">
-            <QuickActions services={services} />
+            <QuickActions />
           </div>
         </SafeComponent>
 
@@ -203,7 +170,7 @@ export default function Dashboard() {
           {/* Transactions récentes avec nouveau style */}
           <SafeComponent>
             <div className="lg:col-span-2">
-              <RecentTransactions transactions={transactions} />
+              <RecentTransactions />
             </div>
           </SafeComponent>
 
