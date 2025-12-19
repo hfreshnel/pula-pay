@@ -1,6 +1,6 @@
 import { useAuthStore } from "../../store/authStore";
 import Screen from "../../components/screen";
-import Button from "../../components/ui/Button";
+import Button from "../../components/ui/button";
 
 export default function Profile() {
   const logout = useAuthStore((s) => s.logout);

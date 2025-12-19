@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import PhoneInput, { ICountry } from 'react-native-international-phone-number';
 import { useRecipientId } from '../../../hooks/use-recipient-id';
 import { useTransfer } from '../../../hooks/use-transfert';
@@ -8,8 +8,11 @@ import { sanitizeCountryCode, sanitizePhoneNumber } from "@/src/utils/phone";
 import Screen from '@/src/components/screen';
 import { ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
+import { useTheme } from "@/src/theme";
+import Button from '../../../components/ui/button';
 
 export default function Transfert() {
+    const theme = useTheme();
     const [queryPhone, setQueryPhone] = useState('');
     const [recipientPhone, setRecipientPhone] = useState('');
     const [contryCode, setCountryCode] = useState<null | ICountry>(null);
@@ -72,15 +75,15 @@ export default function Transfert() {
     if (submittedTx) {
         return (
             <Screen>
-                <ArrowLeft onPress={() => router.replace("/(main)/wallet")} />
-                <Text style={styles.successTitle}>Transfert P2P effectué</Text>
-                <View style={styles.detailsContainer}>
-                    <Text style={styles.label}>Bénéficiaire:</Text>
-                    <Text style={styles.value}>{submittedTx.recipientPhone}</Text>
-                    <Text style={styles.label}>Montant:</Text>
-                    <Text style={styles.value}>{submittedTx.amount} €</Text>
-                    <Text style={styles.label}>Référence:</Text>
-                    <Text style={styles.value}>{submittedTx.txId}</Text>
+                <ArrowLeft onPress={() => router.replace("/(main)/wallet")} color={theme.text} />
+                <Text style={[styles.successTitle, { color: theme.text }]}>Transfert P2P effectué</Text>
+                <View style={[styles.detailsContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                    <Text style={[styles.label, { color: theme.text }]}>Bénéficiaire:</Text>
+                    <Text style={[styles.value, { color: theme.text }]}>{submittedTx.recipientPhone}</Text>
+                    <Text style={[styles.label, { color: theme.text }]}>Montant:</Text>
+                    <Text style={[styles.value, { color: theme.text }]}>{submittedTx.amount} €</Text>
+                    <Text style={[styles.label, { color: theme.text }]}>Référence:</Text>
+                    <Text style={[styles.value, { color: theme.text }]}>{submittedTx.txId}</Text>
                 </View>
                 <Button title="Voir transactions" onPress={() => { router.push("/history") }} />
             </Screen>
@@ -88,11 +91,11 @@ export default function Transfert() {
     }
 
     return (
-        <Screen style={styles.container}>
-            <ArrowLeft onPress={() => router.replace("/(main)/wallet")} />
-            <Text style={styles.title}>Transfert PulaPay → PulaPay</Text>
+        <Screen>
+            <ArrowLeft color={theme.text} onPress={() => router.replace("/(main)/wallet")} />
+            <Text style={[styles.title, { color: theme.text }]}>Transfert PulaPay → PulaPay</Text>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Numéro du bénéficiaire</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Numéro du bénéficiaire</Text>
                 <PhoneInput
                     value={queryPhone}
                     onChangePhoneNumber={setQueryPhone}
@@ -100,47 +103,49 @@ export default function Transfert() {
                     onChangeSelectedCountry={setCountryCode}
                 />
                 {recipientId && !getPhoneUserIdError && (
-                    <Text style={styles.successMessage}>Utilisateur trouvé: {queryPhone}</Text>
+                    <Text style={[styles.successMessage, {color: theme.text}]}>Utilisateur trouvé: {queryPhone}</Text>
                 )}
                 {getPhoneUserIdError && queryPhone && (
-                    <Text style={styles.error}>{getPhoneUserIdError}</Text>
+                    <Text style={[styles.error, {color: theme.text}]}>{getPhoneUserIdError}</Text>
                 )}
             </View>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Montant (EUR)</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Montant (EUR)</Text>
                 <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.border }]}
                     placeholder="Ex: 2000"
                     value={amount}
                     onChangeText={setAmount}
                     keyboardType="numeric"
+                    placeholderTextColor={theme.placeholder}
                 />
             </View>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Message (optionnel)</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Message (optionnel)</Text>
                 <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.border }]}
                     placeholder="Ex: Participation, cadeau..."
                     value={note}
                     onChangeText={setNote}
+                    placeholderTextColor={theme.placeholder}
                 />
             </View>
             <Button
                 title={loading ? 'Envoi...' : 'Envoyer l\'argent'}
                 onPress={handleSubmit}
+                loading={loading}
                 disabled={loading || !recipientPhone || !amount}
             />
-            {loading && <ActivityIndicator style={styles.loader} />}
+            {loading && <ActivityIndicator style={styles.loader} color={theme.primary} />}
+            {error && <Text style={[styles.error, { color: '#ef4444' }]}>{String(error)}</Text>}
             {error && <Text style={styles.error}>{String(error)}</Text>}
         </Screen>
     );
 }
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 16,
-        backgroundColor: '#f9f9f9',
     },
     title: {
         fontSize: 24,
@@ -156,21 +161,20 @@ const styles = StyleSheet.create({
     },
     input: {
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 4,
-        padding: 8,
+        borderRadius: 8,
+        padding: 12,
         fontSize: 16,
     },
     loader: {
         marginTop: 16,
     },
     error: {
-        color: 'red',
         marginTop: 8,
+        fontSize: 14,
     },
     successMessage: {
-        color: 'green',
         marginTop: 8,
+        fontSize: 14,
     },
     successTitle: {
         fontSize: 20,
@@ -179,6 +183,9 @@ const styles = StyleSheet.create({
     },
     detailsContainer: {
         marginBottom: 16,
+        borderWidth: 1,
+        borderRadius: 8,
+        padding: 12,
     },
     value: {
         fontSize: 16,

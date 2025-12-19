@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "PulaPay",
     "slug": "mobile",
-    "version": "1.0.0",
+    "version": "0.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mobile",
@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.freshnelhouenou.pulapay"
     },
     "web": {
       "output": "static",
@@ -44,6 +45,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "edb8c9bc-7c2b-47c9-8c85-a1fffbbf49a8"
+      }
+    },
+    "owner": "freshnelhouenou"
   }
 }

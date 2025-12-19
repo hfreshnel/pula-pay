@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuthStore } from '../../../store/authStore';
 import { useDeposit } from '../../../hooks/use-deposit';
 import PhoneInput from 'react-native-international-phone-number';
 import Screen from '@/src/components/screen';
 import { router } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
+import { useTheme } from "@/src/theme";
+import Button from '../../../components/ui/button';
 
 export default function Deposit() {
+    const theme = useTheme();
     const [method, setMethod] = useState('MTN_MoMo');
     const [phone, setPhone] = useState('');
     const [amount, setAmount] = useState('');
@@ -52,20 +55,20 @@ export default function Deposit() {
     if (submittedTx) {
         return (
             <Screen>
-                <ArrowLeft onPress={() => router.replace("/(main)/wallet")} />
-                <View style={styles.container}>
-                    <Text style={styles.successTitle}>Recharge portefeuille effectué</Text>
-                    <View style={styles.detailsContainer}>
-                        <Text style={styles.label}>Méthode:</Text>
-                        <Text style={styles.value}>{submittedTx.method}</Text>
-                        <Text style={styles.label}>Montant:</Text>
-                        <Text style={styles.value}>{submittedTx.amount} €</Text>
-                        <Text style={styles.label}>Numéro:</Text>
-                        <Text style={styles.value}>{submittedTx.recipient_phone}</Text>
+                <ArrowLeft onPress={() => router.replace("/(main)/wallet")} color={theme.text} />
+                <View style={[styles.container, { backgroundColor: theme.background }]}>
+                    <Text style={[styles.successTitle, { color: theme.text }]}>Recharge portefeuille effectué</Text>
+                    <View style={[styles.detailsContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                        <Text style={[styles.label, { color: theme.text }]}>Méthode:</Text>
+                        <Text style={[styles.value, { color: theme.text }]}>{submittedTx.method}</Text>
+                        <Text style={[styles.label, { color: theme.text }]}>Montant:</Text>
+                        <Text style={[styles.value, { color: theme.text }]}>{submittedTx.amount} €</Text>
+                        <Text style={[styles.label, { color: theme.text }]}>Numéro:</Text>
+                        <Text style={[styles.value, { color: theme.text }]}>{submittedTx.recipient_phone}</Text>
                         {submittedTx.txId && (
                             <>
-                                <Text style={styles.label}>txId:</Text>
-                                <Text style={styles.value}>{submittedTx.txId}</Text>
+                                <Text style={[styles.label, { color: theme.text }]}>txId:</Text>
+                                <Text style={[styles.value, { color: theme.text }]}>{submittedTx.txId}</Text>
                             </>
                         )}
                     </View>
@@ -77,18 +80,19 @@ export default function Deposit() {
 
     return (
         <Screen>
-            <ArrowLeft onPress={() => router.replace("/(main)/wallet")} />
-            <Text style={styles.title}>Recharger le portefeuille</Text>
+            <ArrowLeft onPress={() => router.replace("/(main)/wallet")} color={theme.text} />
+            <Text style={[styles.title, { color: theme.text }]}>Recharger le portefeuille</Text>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Méthode</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Méthode</Text>
                 <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.border }]}
                     value={method}
                     editable={false}
+                    placeholderTextColor={theme.placeholder}
                 />
             </View>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Numéro associé</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Numéro associé</Text>
                 <PhoneInput
                     value={phone.slice(3)}
                     defaultCountry="BJ"
@@ -96,22 +100,24 @@ export default function Deposit() {
                 />
             </View>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Montant (EUR)</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Montant (EUR)</Text>
                 <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.border }]}
                     placeholder="Ex: 100.00"
                     value={amount}
                     onChangeText={setAmount}
                     keyboardType="numeric"
+                    placeholderTextColor={theme.placeholder}
                 />
             </View>
             <Button
                 title={loading ? 'Envoi...' : 'Recharger'}
                 onPress={handleSubmit}
+                loading={loading}
                 disabled={loading || !amount}
             />
-            {loading && <ActivityIndicator style={styles.loader} />}
-            {error && <Text style={styles.error}>{String(error)}</Text>}
+            {loading && <ActivityIndicator style={styles.loader} color={theme.primary} />}
+            {error && <Text style={[styles.error, { color: '#ef4444' }]}>{String(error)}</Text>}
         </Screen>
 
     );
@@ -121,7 +127,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 16,
-        backgroundColor: '#f9f9f9',
     },
     title: {
         fontSize: 24,
@@ -137,17 +142,16 @@ const styles = StyleSheet.create({
     },
     input: {
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 4,
-        padding: 8,
+        borderRadius: 8,
+        padding: 12,
         fontSize: 16,
     },
     loader: {
         marginTop: 16,
     },
     error: {
-        color: 'red',
         marginTop: 8,
+        fontSize: 14,
     },
     successTitle: {
         fontSize: 20,
@@ -156,6 +160,9 @@ const styles = StyleSheet.create({
     },
     detailsContainer: {
         marginBottom: 16,
+        borderWidth: 1,
+        borderRadius: 8,
+        padding: 12,
     },
     value: {
         fontSize: 16,

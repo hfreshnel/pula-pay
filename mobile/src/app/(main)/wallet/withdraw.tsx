@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native';
 import { useWithdraw } from '../../../hooks/use-withdraw';
 import { useAuthStore } from '../../../store/authStore';
 import PhoneInput from 'react-native-international-phone-number';
 import Screen from '@/src/components/screen';
 import { ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
+import { useTheme } from "@/src/theme";
+import Button from '../../../components/ui/button';
 
 export default function Withdraw() {
+    const theme = useTheme();
     const [amount, setAmount] = useState('');
     const [method, setMethod] = useState('MTN_MoMo');
     const [phone, setPhone] = useState('');
@@ -73,28 +76,30 @@ export default function Withdraw() {
 
     return (
         <Screen>
-            <ArrowLeft onPress={() => router.replace("/(main)/wallet")} />
-            <Text style={styles.title}>Demande de retrait</Text>
+            <ArrowLeft onPress={() => router.replace("/(main)/wallet")} color={theme.text} />
+            <Text style={[styles.title, { color: theme.text }]}>Demande de retrait</Text>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Montant à retirer (EUR)</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Montant à retirer (EUR)</Text>
                 <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.border }]}
                     placeholder="Ex: 100.00"
                     value={amount}
                     onChangeText={setAmount}
                     keyboardType="numeric"
+                    placeholderTextColor={theme.placeholder}
                 />
             </View>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Moyen de paiement</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Moyen de paiement</Text>
                 <TextInput
-                    style={styles.input}
+                    style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.text, borderColor: theme.border }]}
                     value={method}
                     editable={false}
+                    placeholderTextColor={theme.placeholder}
                 />
             </View>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Numéro associé</Text>
+                <Text style={[styles.label, { color: theme.text }]}>Numéro associé</Text>
                 <PhoneInput
                     value={phone.slice(3)}
                     defaultCountry="BJ"
@@ -104,10 +109,11 @@ export default function Withdraw() {
             <Button
                 title={loading ? 'Envoi...' : 'Retirer'}
                 onPress={handleSubmit}
+                loading={loading}
                 disabled={loading || !amount}
             />
-            {loading && <ActivityIndicator style={styles.loader} />}
-            {error && <Text style={styles.error}>{String(error)}</Text>}
+            {loading && <ActivityIndicator style={styles.loader} color={theme.primary} />}
+            {error && <Text style={[styles.error, { color: '#ef4444' }]}>{String(error)}</Text>}
         </Screen>
     );
 }
@@ -116,7 +122,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 16,
-        backgroundColor: '#f9f9f9',
     },
     title: {
         fontSize: 24,
@@ -132,17 +137,16 @@ const styles = StyleSheet.create({
     },
     input: {
         borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 4,
-        padding: 8,
+        borderRadius: 8,
+        padding: 12,
         fontSize: 16,
     },
     loader: {
         marginTop: 16,
     },
     error: {
-        color: 'red',
         marginTop: 8,
+        fontSize: 14,
     },
     successTitle: {
         fontSize: 20,
@@ -151,6 +155,9 @@ const styles = StyleSheet.create({
     },
     detailsContainer: {
         marginBottom: 16,
+        borderWidth: 1,
+        borderRadius: 8,
+        padding: 12,
     },
     value: {
         fontSize: 16,
