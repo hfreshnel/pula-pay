@@ -1,6 +1,7 @@
 import { AnyZodObject, ZodError } from "zod";
 import { RequestHandler } from "express";
-import { error } from "console";
+
+import { ValidationError } from "../errors/AppErrors.js";
 
 export function validateBody(schema: AnyZodObject): RequestHandler {
     return (req, res, next) => {
@@ -9,37 +10,37 @@ export function validateBody(schema: AnyZodObject): RequestHandler {
             next();
         } catch (err) {
             if (err instanceof ZodError) {
-                return res.status(400).json({ error: "Invalid input", details: err.errors });
+                throw new ValidationError("Invalid request body");
             }
-            next(err);
+            throw err;
         }
     };
 };
 
 export function validateParams(schema: AnyZodObject): RequestHandler {
     return (req, res, next) => {
-    try {
-      req.params = schema.parse(req.params);
-      next();
-    } catch (err) {
-      if (err instanceof ZodError) {
-        return res.status(400).json({ error: "Invalid params", details: err.errors });
-      }
-      next(err);
-    }
-  };
+        try {
+            req.params = schema.parse(req.params);
+            next();
+        } catch (err) {
+            if (err instanceof ZodError) {
+                throw new ValidationError("Invalid request parameters");
+            }
+            throw err;
+        }
+    };
 };
 
 export function validateQuery(schema: AnyZodObject): RequestHandler {
-  return (req, res, next) => {
-    try {
-      req.query = schema.parse(req.query);
-      next();
-    } catch (err) {
-      if (err instanceof ZodError) {
-        return res.status(400).json({ error: "Invalid query", details: err.errors });
-      }
-      next(err);
-    }
-  };
+    return (req, res, next) => {
+        try {
+            req.query = schema.parse(req.query);
+            next();
+        } catch (err) {
+            if (err instanceof ZodError) {
+                throw new ValidationError("Invalid request query");
+            }
+            throw err;
+        }
+    };
 }

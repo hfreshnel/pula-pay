@@ -1,61 +1,55 @@
-import { error } from "console";
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 
+import { UnauthorizedError, InternalError } from "../errors/AppErrors.js";
+
 // Extend Express Request interface to include user
 declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        [key: string]: any;
-      };
+    namespace Express {
+        interface Request {
+            user?: {
+                id: string;
+            };
+        }
     }
-  }
 }
 
 export default function verifyAuth(req: Request, res: Response, next: NextFunction) {
     const header = req.headers.authorization;
-
     if (!header || !header.startsWith("Bearer ")) {
-        res.status(401).json({ error: "Token manquant" });
+        throw new UnauthorizedError("Missing authentication token");
     }
 
     const token = header?.split(" ")[1];
-
     if (!token) {
-        res.status(401).json({ error: "Token manquant" });
-        return;
+        throw new UnauthorizedError("Missing authentication token");
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        throw new InternalError("JWT secret is not configured");
     }
 
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
-
+        const decoded = jwt.verify(token, secret) as JwtPayload;
         if (!decoded.userId) {
-            res.status(401).json({ error: "Token malformé" });
-            return;
+            throw new UnauthorizedError("Malformed token");
         }
 
         req.user = {
             id: decoded.userId,
-            ...decoded
         };
 
         next();
     } catch (error) {
         if (error instanceof jwt.TokenExpiredError) {
-            res.status(401).json({ error: "Token expiré" });
-            return;
+            throw new UnauthorizedError("Token expired");
         } else if (error instanceof jwt.JsonWebTokenError) {
-            res.status(401).json({ error: "Token invalide" });
-            return;
+            throw new UnauthorizedError("Invalid token");
         } else if (error instanceof jwt.NotBeforeError) {
-            res.status(401).json({ error: "Token pas encore valide" });
-            return;
+            throw new UnauthorizedError("Token not active yet");
         } else {
-            console.error("JWT verification error:", error);
-            res.status(500).json({ error: "Erreur de vérification du token" });
-            return;
+            throw new InternalError("Token verification failed");
         }
     }
 }
