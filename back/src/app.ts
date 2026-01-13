@@ -15,6 +15,9 @@ import walletRouter from "./modules/wallet/wallet.routes.js";
 
 const app = express();
 
+// Disable ETag to avoid 304 responses
+app.set("etag", false);
+
 app.use(helmet());
 
 const allowedOrigins = [
