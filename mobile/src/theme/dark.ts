@@ -1,15 +1,30 @@
-import type { Theme } from "./theme";
+import { ColorPalette, Theme } from "./types";
+import { SPACING, BORDER_RADIUS, TYPOGRAPHY } from "@/src/constants/theme";
+
+const darkPalette: ColorPalette = {
+    primary: "#818cf8",
+    onPrimary: "#FFFFFF",
+    secondary: "#475569",
+    onSecondary: "#F8FAFC",
+    background: "#0F172A",
+    surface: "#1E293B",
+    surfaceVariant: "#334155",
+    text: "#F8FAFC",
+    textMuted: "#94a3b8",
+    outline: "#334155",
+    inputBackground: "#0F172A",
+    placeholder: "#64748b",
+    success: "#4ade80",
+    danger: "#f87171",
+    warning: "#fbbf24",
+};
 
 const dark: Theme = {
-  mode: "dark" as const,
-  background: "#020617",
-  text: "#F9FAFB",
-  primary: "#3B82F6",
-  primaryText: "#FFFFFF",
-  card: "#0F172A",
-  border: "#1F2937",
-  inputBackground: "#020617",
-  placeholder: "#6B7280",
+    mode: "dark" as const,
+    colors: darkPalette,
+    spacing: SPACING,
+    borderRadius: BORDER_RADIUS,
+    typography: TYPOGRAPHY,
 };
 
 export default dark;

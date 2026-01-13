@@ -2,6 +2,20 @@
     "app": {
         "name": "MoMo App"
     },
+    "common": {
+        "phone": "Numéro de téléphone",
+        "password": "Mot de passe",
+        "button": {
+            "submit": "Soumettre",
+            "cancel": "Annuler",
+            "confirm": "Retour"
+        },
+        "errors": {
+            "network": "Erreur réseau. Veuillez réessayer.",
+            "unknown": "Une erreur inconnue est survenue. Veuillez réessayer.",
+            "invalidPhone": "Numéro de téléphone invalide."
+        }
+    },
     "login": {
         "title": "Connexion",
         "phone": "Numéro de téléphone",

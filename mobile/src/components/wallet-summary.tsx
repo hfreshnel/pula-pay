@@ -6,9 +6,14 @@ import { Eye, EyeOff, RotateCw, Wallet, Plus, ArrowUpRight, ArrowDownRight, Tren
 
 import { useAuthStore } from "../store/authStore";
 import { useBalance } from "../hooks/use-balance";
+import { useTheme } from "../theme";
+import { useStyles } from "../hooks/use-styles";
+import type { Theme } from "../theme/types";
 
 export default function WalletSummary() {
     const router = useRouter();
+    const theme = useTheme();
+    const styles = useStyles(getStyles);
     const user = useAuthStore((s) => s.user);
     console.log(`user: ${user?.id}`);
     const { balance, loading, error, getBalance } = useBalance();
@@ -96,11 +101,11 @@ export default function WalletSummary() {
 
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     card: {
-        margin: 12,
-        borderRadius: 12,
-        backgroundColor: '#fff',
+        margin: theme.spacing.s,
+        borderRadius: theme.borderRadius.l,
+        backgroundColor: theme.colors.surface,
         overflow: 'hidden',
         shadowColor: '#000',
         shadowOpacity: 0.08,
@@ -108,8 +113,8 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     header: {
-        backgroundColor: '#6d28d9',
-        padding: 16,
+        backgroundColor: theme.colors.primary,
+        padding: theme.spacing.m,
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -120,63 +125,63 @@ const styles = StyleSheet.create({
     small: {
         color: 'rgba(255,255,255,0.85)',
         fontSize: 13,
-        marginBottom: 6,
+        marginBottom: theme.spacing.xs,
     },
     rowTop: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     balance: {
-        color: '#fff',
+        color: theme.colors.onPrimary,
         fontSize: 26,
         fontWeight: '700',
     },
     headerRight: {
         flexDirection: 'row',
-        gap: 8,
-        marginLeft: 12,
+        gap: theme.spacing.xs,
+        marginLeft: theme.spacing.s,
     },
     iconButton: {
-        padding: 8,
-        borderRadius: 8,
+        padding: theme.spacing.xs,
+        borderRadius: theme.borderRadius.m,
     },
     iconText: {
-        color: '#fff',
+        color: theme.colors.onPrimary,
         fontSize: 18,
     },
     actions: {
-        padding: 12,
+        padding: theme.spacing.s,
         flexDirection: 'row',
         justifyContent: 'space-between',
     },
     actionBtn: {
         flex: 1,
-        marginHorizontal: 6,
-        paddingVertical: 12,
-        borderRadius: 10,
+        marginHorizontal: theme.spacing.xs,
+        paddingVertical: theme.spacing.s,
+        borderRadius: theme.borderRadius.m,
         alignItems: 'center',
     },
     actionText: {
-        color: '#fff',
+        color: theme.colors.onPrimary,
         fontWeight: '700',
     },
     primary: {
-        backgroundColor: '#7c3aed',
+        backgroundColor: theme.colors.primary,
     },
     success: {
-        backgroundColor: '#10b981',
+        backgroundColor: theme.colors.success,
     },
     warn: {
-        backgroundColor: '#f97316',
+        backgroundColor: theme.colors.warning,
     },
     footer: {
-        padding: 12,
+        padding: theme.spacing.s,
         borderTopWidth: 1,
-        borderTopColor: '#f3f4f6',
+        borderTopColor: theme.colors.outline,
         alignItems: 'center',
     },
     details: {
-        color: '#6d28d9',
+        color: theme.colors.primary,
         fontWeight: '700',
     }
 });

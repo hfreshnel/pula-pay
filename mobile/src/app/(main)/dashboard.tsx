@@ -7,9 +7,12 @@ import QuickActions from "@/src/components/quick-actions";
 import RecentTransactions from "@/src/components/recent-transactions";
 import SafeComponent from "@/src/components/safe-component";
 import WalletSummary from "@/src/components/wallet-summary";
+import { useStyles } from "@/src/hooks/use-styles";
+import type { Theme } from "@/src/theme/types";
 
 export default function Dashboard() {
     const { t } = useTranslation();
+    const styles = useStyles(getStyles);
     const user: any = useAuthStore((s) => s.user);
     const logout = useAuthStore((s) => s.logout);
 
@@ -19,28 +22,19 @@ export default function Dashboard() {
         : "Bonjour 👋";
 
     return (
-        <ScrollView contentContainerStyle={styles.container}>
+        <Screen scroll contentStyle={styles.container}>
             <SafeComponent>
                 <View style={styles.header}>
                     <View>
                         <Text style={styles.greeting}>{greeting}</Text>
                         <Text style={styles.date}>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
                     </View>
-                    <TouchableOpacity style={styles.notificationButton} onPress={() => { /* TODO: open notifications */ }}>
-                        <Text style={styles.notificationText}>🔔</Text>
-                    </TouchableOpacity>
                 </View>
             </SafeComponent>
 
             <SafeComponent>
                 <View style={{ width: '100%' }}>
                     <WalletSummary />
-                </View>
-            </SafeComponent>
-
-            <SafeComponent>
-                <View style={{ width: '100%' }}>
-                    <QuickActions />
                 </View>
             </SafeComponent>
 
@@ -63,46 +57,38 @@ export default function Dashboard() {
                 </View>
             </SafeComponent>
 
-        </ScrollView>
+        </Screen>
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
-        padding: 16,
-        paddingBottom: 40,
+        padding: theme.spacing.m,
+        paddingBottom: theme.spacing.xxl,
         alignItems: 'center',
-        backgroundColor: '#f8fafc',
     },
     header: {
         width: '100%',
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: theme.spacing.s,
     },
     greeting: {
-        fontSize: 22,
-        fontWeight: '700',
-        color: '#111827',
+        ...theme.typography.h1,
+        color: theme.colors.text,
     },
     date: {
-        color: '#6b7280',
-        marginTop: 4,
-    },
-    notificationButton: {
-        padding: 8,
-        borderRadius: 10,
-    },
-    notificationText: {
-        fontSize: 18,
+        ...theme.typography.caption,
+        color: theme.colors.textMuted,
+        marginTop: theme.spacing.xs,
     },
     promoCard: {
         width: '100%',
-        backgroundColor: '#7c3aed',
-        borderRadius: 12,
-        padding: 16,
-        marginVertical: 12,
+        backgroundColor: theme.colors.primary,
+        borderRadius: theme.borderRadius.l,
+        padding: theme.spacing.m,
+        marginVertical: theme.spacing.s,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -111,34 +97,22 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     promoTitle: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '700',
-        marginBottom: 4,
+        ...theme.typography.h2,
+        color: theme.colors.onPrimary,
+        marginBottom: theme.spacing.xs,
     },
     promoSubtitle: {
-        color: '#fff',
+        ...theme.typography.body,
+        color: theme.colors.onPrimary,
     },
     promoButton: {
         backgroundColor: 'rgba(255,255,255,0.15)',
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-        borderRadius: 10,
+        paddingVertical: theme.spacing.xs,
+        paddingHorizontal: theme.spacing.s,
+        borderRadius: theme.borderRadius.m,
     },
     promoButtonText: {
-        color: '#fff',
+        color: theme.colors.onPrimary,
         fontWeight: '700',
-    },
-    logoutButton: {
-        marginTop: 20,
-        padding: 12,
-        backgroundColor: '#ef4444',
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    logoutButtonText: {
-        color: '#fff',
-        fontWeight: '700',
-        fontSize: 16,
     },
 });

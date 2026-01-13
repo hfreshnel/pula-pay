@@ -1,6 +1,9 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
+import { useTheme } from "../theme";
+import { useStyles } from "../hooks/use-styles";
+import type { Theme } from "../theme/types";
 
 type Transaction = {
   id?: string | number;
@@ -78,6 +81,8 @@ function formatDate(dateInput?: string) {
 
 export default function RecentTransactions({ transactions: transactionsProp }: { transactions?: Transaction[] }) {
   const router = useRouter();
+  const theme = useTheme();
+  const styles = useStyles(getStyles);
 
   const source = Array.isArray(transactionsProp) ? transactionsProp : [];
 
@@ -158,87 +163,86 @@ export default function RecentTransactions({ transactions: transactionsProp }: {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   card: {
-    margin: 12,
-    borderRadius: 12,
-    backgroundColor: '#fff',
+    margin: theme.spacing.s,
+    borderRadius: theme.borderRadius.l,
+    backgroundColor: theme.colors.surface,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
-    paddingBottom: 8,
+    paddingBottom: theme.spacing.xs,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingHorizontal: theme.spacing.m,
+    paddingTop: theme.spacing.s,
+    paddingBottom: theme.spacing.xs,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
+    ...theme.typography.h2,
+    color: theme.colors.text,
   },
   seeAll: {
-    color: '#6d28d9',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   emptyBody: {
-    padding: 20,
+    padding: theme.spacing.l,
     alignItems: 'center',
   },
   emptyIcon: {
     width: 64,
     height: 64,
-    borderRadius: 14,
-    backgroundColor: '#f5f3ff',
+    borderRadius: theme.borderRadius.l,
+    backgroundColor: theme.colors.surfaceVariant,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: theme.spacing.s,
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 6,
+    ...theme.typography.h2,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
   },
   emptySubtitle: {
-    color: '#6b7280',
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: theme.spacing.s,
   },
   primaryButton: {
-    backgroundColor: '#7c3aed',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.m,
+    paddingVertical: theme.spacing.s,
+    borderRadius: theme.borderRadius.m,
   },
   primaryButtonText: {
-    color: '#fff',
+    color: theme.colors.onPrimary,
     fontWeight: '700',
   },
   list: {
-    paddingHorizontal: 8,
+    paddingHorizontal: theme.spacing.xs,
   },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: theme.spacing.s,
+    paddingHorizontal: theme.spacing.s,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: theme.colors.outline,
   },
   iconWrap: {
     width: 48,
     height: 48,
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.l,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: theme.spacing.s,
   },
   iconEmoji: {
     fontSize: 20,
@@ -247,47 +251,47 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemTitle: {
-    fontSize: 14,
+    ...theme.typography.body,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   rowMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.xs,
   },
   dateText: {
-    color: '#6b7280',
-    fontSize: 12,
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
   },
   operatorBadge: {
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    backgroundColor: theme.colors.surfaceVariant,
+    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.m,
   },
   operatorText: {
-    fontSize: 12,
-    color: '#374151',
+    ...theme.typography.caption,
+    color: theme.colors.text,
   },
   rightCol: {
     alignItems: 'flex-end',
     minWidth: 120,
   },
   amountText: {
-    fontSize: 14,
+    ...theme.typography.body,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   statusBadge: {
-    marginTop: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    marginTop: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.xs,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.m,
   },
   statusText: {
-    fontSize: 12,
+    ...theme.typography.caption,
     fontWeight: '600',
   },
 });

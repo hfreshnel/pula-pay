@@ -1,6 +1,9 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { useTheme } from "../theme";
+import { useStyles } from "../hooks/use-styles";
+import type { Theme } from "../theme/types";
 
 const quickActionsData = [
   {
@@ -49,6 +52,8 @@ const quickActionsData = [
 
 export default function QuickActions() {
   const router = useRouter();
+  const theme = useTheme();
+  const styles = useStyles(getStyles);
 
   const goTo = (page: string) => {
     // Simple mapping: use `/${page}` as path — adjust if your routes differ
@@ -86,25 +91,24 @@ export default function QuickActions() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
   container: {
-    paddingHorizontal: 12,
-    marginTop: 8,
+    paddingHorizontal: theme.spacing.s,
+    marginTop: theme.spacing.xs,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
-    paddingHorizontal: 4,
+    marginBottom: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.xs,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
+    ...theme.typography.h2,
+    color: theme.colors.text,
   },
   seeAll: {
-    color: '#6d28d9',
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   grid: {
@@ -114,10 +118,10 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '48%',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.l,
+    padding: theme.spacing.s,
+    marginBottom: theme.spacing.s,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.05,
@@ -127,32 +131,32 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 56,
     height: 56,
-    borderRadius: 12,
-    backgroundColor: '#f3f4f6',
+    borderRadius: theme.borderRadius.l,
+    backgroundColor: theme.colors.surfaceVariant,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.xs,
   },
   icon: {
     fontSize: 26,
   },
   cardTitle: {
-    fontSize: 14,
+    ...theme.typography.body,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
     marginBottom: 2,
     textAlign: 'center',
   },
   cardSubtitle: {
-    fontSize: 12,
-    color: '#7c3aed',
+    ...theme.typography.caption,
+    color: theme.colors.primary,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
     textAlign: 'center',
   },
   cardDesc: {
-    fontSize: 11,
-    color: '#6b7280',
+    ...theme.typography.caption,
+    color: theme.colors.textMuted,
     textAlign: 'center',
   },
 });

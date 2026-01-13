@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { getMe } from '../api/users';
 import { Platform } from 'react-native';
+import { useWalletStore } from './walletStore';
 
 
 // Storage layer: use localStorage on web, SecureStore on native
@@ -37,16 +38,19 @@ type User = {
     phone: string;
 };
 
-type Status = 'idle' | 'loading' | 'authenticated' | 'unauthenticated';
+type AuthStatus = "bootstrapping" | "authenticated" | "unauthenticated";
+
+type AuthError = { code: "TOKEN_INVALID" | "NETWORK_ERROR" | "UNKNOWN"; message: string } | null;
 
 type AuthState = {
     token: string | null;
     user: User | null;
-    status: Status;
-    error: string | null;
+    status: AuthStatus;
+    error: AuthError;
+    bootstrapped: boolean;
 
     bootstrap: () => Promise<void>;
-    login: (token: string | null) => Promise<void>;
+    login: (token: string) => Promise<void>;
     logout: () => Promise<void>;
     refreshUser: () => Promise<void>;
 };
@@ -54,11 +58,16 @@ type AuthState = {
 export const useAuthStore = create<AuthState>((set, get) => ({
     token: null,
     user: null,
-    status: 'idle',
+    status: 'bootstrapping',
     error: null,
+    bootstrapped: false,
 
     bootstrap: async () => {
-        set({ status: "loading", error: null });
+        if (get().bootstrapped) {
+            return
+        };
+
+        set({ status: "bootstrapping", error: null });
 
         const token = await storage.getItem("auth_token");
         if (!token) {
@@ -67,6 +76,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 user: null,
                 status: "unauthenticated",
                 error: null,
+                bootstrapped: true,
             });
             return;
         }
@@ -74,55 +84,58 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ token });
 
         try {
-            const {data} = await getMe() as any;
-            set({ user: data.userData ?? data, status: "authenticated" });
+            const user = await getMe() as any;
+            set({ user, status: "authenticated", bootstrapped: true });
         } catch (error) {
             await storage.removeItem("auth_token");
             set({
                 token: null,
                 user: null,
                 status: "unauthenticated",
-                error: "Failed to fetch user data",
+                error: { code: "TOKEN_INVALID", message: "Session expirée" },
+                bootstrapped: true,
             });
         }
     },
 
-    login: async (token) => {
-    if (!token) {
-      await storage.removeItem("auth_token");
-      set({
-        token: null,
-        user: null,
-        status: "unauthenticated",
-        error: "Missing token",
-      });
-      return;
-    }
+    login: async (token: string) => {
+        await storage.setItem("auth_token", token);
+        set({ token, error: null });
 
-    await storage.setItem("auth_token", token);
-    set({ token, error: null });
+        try {
+            const user = await getMe() as any;
+            set({ user, status: "authenticated" });
+        } catch (error) {
 
-    await get().bootstrap();
-  },
+            set({
+                token: null,
+                user: null,
+                status: "unauthenticated",
+                error: { code: "NETWORK_ERROR", message: "Connexion échouée" },
+            });
+        }
+    },
 
     logout: async () => {
-    await storage.removeItem("auth_token");
-    set({
-      token: null,
-      user: null,
-      status: "unauthenticated",
-      error: null,
-    });
-  },
+        await storage.removeItem("auth_token");
+        useWalletStore.getState().reset();
+        set({
+            token: null,
+            user: null,
+            status: "unauthenticated",
+            error: null,
+            bootstrapped: true,
+        });
+    },
 
     refreshUser: async () => {
-    const token = get().token;
-    if (!token) return;
-
-    try {
-      const data = await getMe() as any;
-      set({ user: data.userData ?? data });
-    } catch (error) {
-    }
-  },
+        try {
+            const { data } = await getMe() as any;
+            set({ user: data.userData ?? data });
+        } catch (error) {
+            set({
+                error: { code: "NETWORK_ERROR", message: "Impossible de rafraîchir l'utilisateur" },
+            });
+        }
+    },
 }));

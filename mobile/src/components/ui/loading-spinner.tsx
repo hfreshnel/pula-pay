@@ -1,22 +1,41 @@
-import Animated from "react-native-reanimated";
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { useTheme } from "../../theme";
+import { useStyles } from "../../hooks/use-styles";
+import type { Theme } from "../../theme/types";
 
-export default function LoadingSpinner({ message = "Loading..." }) {
-    return (
-        <Animated.View
-            style={{
-                justifyContent: "center",
-                alignItems: "center",
-                flex: 1,
-            }}
-        >
-            <Animated.Text
-                style={{
-                    fontSize: 18,
-                    fontWeight: "500",
-                }}
-            >
-                {message}
-            </Animated.Text>
-        </Animated.View>
-    )
+type Props = {
+  message?: string;
+  fullscreen?: boolean;
+  size?: "small" | "large";
+};
+
+export default function LoadingSpinner({
+  message,
+  fullscreen = true,
+  size = "large",
+}: Props) {
+  const theme = useTheme();
+  const styles = useStyles((theme: Theme) => getStyles(theme, fullscreen));
+
+  return (
+    <View style={styles.container}>
+      <ActivityIndicator size={size} color={theme.colors.primary} />
+      {message ? <Text style={styles.text}>{message}</Text> : null}
+    </View>
+  );
 }
+
+const getStyles = (theme: Theme, fullscreen: boolean) =>
+  StyleSheet.create({
+    container: {
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: fullscreen ? theme.colors.background : "transparent",
+      flex: fullscreen ? 1 : undefined,
+    },
+    text: {
+      ...theme.typography.caption,
+      color: theme.colors.text,
+      marginTop: theme.spacing.s,
+    },
+  });

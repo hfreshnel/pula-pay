@@ -1,6 +1,6 @@
 import { useColorScheme } from "react-native";
-import { useUIStore } from "../store/uiStore";
-import type { Theme } from "./theme";
+import { useUIStore } from "@/src/store/uiStore";
+import type { Theme } from "@/src/theme/types";
 import light from "./light";
 import dark from "./dark";
 

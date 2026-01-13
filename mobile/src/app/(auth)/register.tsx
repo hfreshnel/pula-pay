@@ -1,16 +1,24 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import PhoneNumberInput, { ICountry, isValidPhoneNumber } from "react-native-international-phone-number";
-import { register, verify } from "../../api/auth";
-import { useAuthStore } from "../../store/authStore";
+
+import Screen from "@/src/components/screen";
+import Input from "@/src/components/ui/Input";
+import Button from "@/src/components/ui/button";
+import { register } from "../../api/auth";
 import { sanitizeCountryCode, sanitizePhoneNumber } from "../../utils/phone";
 import { getErrorMessage } from "../../utils/httpError";
+import { useTheme } from "@/src/theme";
+import { useStyles } from "@/src/hooks/use-styles";
+import type { Theme } from "@/src/theme/types";
 
 export default function Register() {
     const { t } = useTranslation();
     const router = useRouter();
+    const theme = useTheme();
+    const styles = useStyles(getStyles);
 
     const [phone, setPhone] = useState("");
     const [contryCode, setCountryCode] = useState<null | ICountry>(null);
@@ -32,12 +40,16 @@ export default function Register() {
                 setError("Les mots de passe ne correspondent pas.");
                 return;
             }
+            if (!contryCode?.idd?.root) {
+                setError(t("register.invalidPhone"));
+                return;
+            }
             
-            const formattedPhone = `${sanitizeCountryCode(contryCode?.idd.root as string)}${sanitizePhoneNumber(phone)}`;
+            const formattedPhone = sanitizeCountryCode(contryCode.idd.root) + sanitizePhoneNumber(phone);
             await register(formattedPhone, password);
-            router.push({ pathname: "/(auth)/verify-opt", params: { phone: formattedPhone } });
+            router.push({ pathname: "/(auth)/verify-otp", params: { phone: formattedPhone } });
         } catch (e) {
-            setError(getErrorMessage(e) || "Erreur d'inscription");
+            setError(getErrorMessage(e) || t("common.errors.registerFailed"));
         } finally {
             setLoading(false);
         }
@@ -45,7 +57,7 @@ export default function Register() {
     
 
     return (
-        <ScrollView contentContainerStyle={styles.container}>
+        <Screen scroll style={styles.container}>
             <View style={styles.card}>
                 <Text style={styles.logo}>Pulapay</Text>
                 <Text style={styles.title}>{t("register.title")}</Text>
@@ -57,13 +69,14 @@ export default function Register() {
                         onChangePhoneNumber={setPhone}
                         defaultCountry="BJ"
                         onChangeSelectedCountry={setCountryCode}
+                        ref={null}
+                        theme={theme.mode === "dark" ? "dark" : "light"}
                     />
                 </View>
 
                 <View style={styles.formGroup}>
                     <Text style={styles.label}>{t("login.password")}</Text>
-                    <TextInput
-                        style={styles.input}
+                    <Input
                         placeholder="••••••••"
                         value={password}
                         onChangeText={setPassword}
@@ -74,8 +87,7 @@ export default function Register() {
 
                 <View style={styles.formGroup}>
                     <Text style={styles.label}>{t("register.confirmPassword")}</Text>
-                    <TextInput
-                        style={styles.input}
+                    <Input
                         placeholder="••••••••"
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
@@ -86,17 +98,12 @@ export default function Register() {
 
                 {error && <Text style={styles.error}>{error}</Text>}
 
-                <TouchableOpacity
-                    style={[styles.button, loading && styles.buttonDisabled]}
+                <Button
+                    title={t("register.button")}
                     onPress={handleSubmit}
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.buttonText}>{t("register.button")}</Text>
-                    )}
-                </TouchableOpacity>
+                    loading={loading}
+                    fullWidth
+                />
 
                 <View style={styles.linkContainer}>
                     <Text style={styles.linkText}>{t("register.goToLogin")} </Text>
@@ -107,155 +114,62 @@ export default function Register() {
                     </Link>
                 </View>
             </View>
-        </ScrollView>
+        </Screen>
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#f8fafc",
-        padding: 16,
+        padding: theme.spacing.m,
+        backgroundColor: theme.colors.background,
     },
     card: {
-        width: "100%",
-        maxWidth: 420,
-        backgroundColor: "#fff",
-        borderRadius: 20,
-        padding: 24,
-        shadowColor: "#000",
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-        elevation: 3,
-        borderWidth: 1,
-        borderColor: "rgba(139, 92, 246, 0.1)",
+        borderRadius: theme.borderRadius.l,
+        padding: theme.spacing.xl,
+        backgroundColor: theme.colors.surface,
+        borderColor: theme.colors.surfaceVariant,
     },
     logo: {
-        fontSize: 32,
-        fontWeight: "700",
-        color: "#6366f1",
+        ...theme.typography.h1,
+        color: theme.colors.primary,
         textAlign: "center",
-        marginBottom: 12,
+        marginBottom: theme.spacing.s,
     },
     title: {
-        fontSize: 22,
-        fontWeight: "700",
-        color: "#6366f1",
+        ...theme.typography.h2,
+        color: theme.colors.text,
         textAlign: "center",
-        marginBottom: 24,
+        marginBottom: theme.spacing.l,
     },
     formGroup: {
-        marginBottom: 16,
+        marginBottom: theme.spacing.m,
     },
     label: {
-        fontSize: 13,
-        fontWeight: "600",
-        color: "#374151",
-        marginBottom: 8,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 16,
-        color: "#111827",
-    },
-    button: {
-        backgroundColor: "#6366f1",
-        paddingVertical: 12,
-        borderRadius: 12,
-        alignItems: "center",
-        marginTop: 20,
-    },
-    buttonDisabled: {
-        opacity: 0.6,
-    },
-    buttonText: {
-        color: "#fff",
-        fontWeight: "700",
-        fontSize: 16,
+        ...theme.typography.caption,
+        color: theme.colors.textMuted,
+        marginBottom: theme.spacing.xs,
     },
     error: {
-        color: "#dc2626",
-        fontSize: 13,
-        marginTop: 12,
+        ...theme.typography.caption,
+        color: theme.colors.danger,
+        marginTop: theme.spacing.m,
         fontWeight: "500",
     },
     linkContainer: {
         flexDirection: "row",
         justifyContent: "center",
-        marginTop: 16,
+        marginTop: theme.spacing.l,
     },
     linkText: {
-        color: "#6b7280",
-        fontSize: 13,
+        ...theme.typography.caption,
+        color: theme.colors.textMuted,
     },
     linkButton: {
-        color: "#6366f1",
+        ...theme.typography.caption,
+        color: theme.colors.primary,
         fontWeight: "700",
-        fontSize: 13,
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.4)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    otpCard: {
-        width: "90%",
-        maxWidth: 360,
-        backgroundColor: "#fff",
-        borderRadius: 16,
-        padding: 24,
-        alignItems: "center",
-    },
-    otpTitle: {
-        fontSize: 18,
-        fontWeight: "700",
-        color: "#6366f1",
-        marginBottom: 8,
-    },
-    otpSubtitle: {
-        fontSize: 14,
-        color: "#6b7280",
-        textAlign: "center",
-        marginBottom: 16,
-    },
-    otpInput: {
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 18,
-        textAlign: "center",
-        letterSpacing: 4,
-        width: "70%",
-        color: "#111827",
-        marginBottom: 16,
-    },
-    phoneContainer: {
-        width: "100%",
-        backgroundColor: "#fff",
-    },
-    phoneTextContainer: {
-        backgroundColor: "#fff",
-        borderWidth: 1,
-        borderColor: "#e5e7eb",
-        borderRadius: 12,
-        paddingHorizontal: 8,
-    },
-    phoneInput: {
-        fontSize: 16,
-        color: "#111827",
-        paddingVertical: 10,
-    },
-    phoneCodeText: {
-        fontSize: 14,
-        fontWeight: "600",
-    },
+    }
 });
