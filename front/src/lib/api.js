@@ -1,5 +1,9 @@
 import axios from "axios";
 
+if (!import.meta.env.VITE_API_URL) {
+  console.warn("VITE_API_URL is missing; API calls will be relative to the frontend origin.");
+}
+
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
     headers: {"Content-Type": "application/json"}
