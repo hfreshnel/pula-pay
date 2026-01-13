@@ -21,11 +21,11 @@ export async function getTxStatus(txId: string) {
 };
 
 export async function getTransactionsList(userId: string) {
-    const { data } = await client.get(`/wallet/users/${userId}/transactions`);
+    const { data } = await client.get(`/wallet/users/transactions`);
     return data;
 }
 
-export async function getRecipientId(senderId: string, phone: string) {
-    const { data } = await client.get("/wallet/resolve-recipient", { params: { senderId, phone }});
+export async function getRecipientId(phone: string) {
+    const { data } = await client.get("/wallet/resolve-recipient", { params: { phone }});
     return data;
 }

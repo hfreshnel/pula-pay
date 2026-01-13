@@ -1,6 +1,10 @@
-import axios from "axios";
+import axios, { Axios, AxiosError } from "axios";
 import { useAuthStore } from "../store/authStore";
 import { API_URL } from "../constants/config";
+
+// Lazy import to avoid circular dependency:
+// authStore -> users -> client -> authStore
+//const getAuthStore = () => require("../store/authStore").useAuthStore;
 
 
 const client = axios.create({
@@ -8,20 +12,27 @@ const client = axios.create({
 });
 
 client.interceptors.request.use((config) => {
-    
-    const { token } = useAuthStore.getState() as { token?: string | null };
+    const { token } = useAuthStore.getState();
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 });
 
+let isLoggingOut = false;
+
 client.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    if (error?.response?.status === 401) {
-      const logout = useAuthStore.getState().logout;
-      await logout();
+  async (error: AxiosError) => {
+    const status = error.response?.status;
+    if (status !== 401) {
+        const store = useAuthStore.getState();
+
+        if (!isLoggingOut) {
+            isLoggingOut = true;
+            await store.logout();
+            isLoggingOut = false;
+        }
     }
     return Promise.reject(error);
   }
