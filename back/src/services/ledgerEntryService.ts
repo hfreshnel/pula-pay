@@ -1,10 +1,18 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { prisma } from "./client.js";
 
-const prisma = new PrismaClient();
+import { PrismaTx, Db } from "../types/module.wallet.js";
+
+function dbClient(tx?: PrismaTx): Db {
+    return tx ?? prisma;
+}
 
 const ledgerEntryService = {
-    getLedgerEntriesForAccount: async function (accountIds: string[]) {
-        return await prisma.ledgerEntry.findMany({
+    getLedgerEntriesForAccount: async function (accountIds: string[], tx?: PrismaTx) {
+        if (accountIds.length === 0) return [];
+
+        const db = dbClient(tx);
+
+        return await db.ledgerEntry.findMany({
             where: { accountId: { in: accountIds } },
             select: { txId: true },
             distinct: ["txId"]

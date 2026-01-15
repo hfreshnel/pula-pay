@@ -2,19 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import userService from "../../services/userService.js";
-import { AppError } from "../../errors/AppErrors.js";
-
-// Input validation helpers
-function validatePhone(phone: string): boolean {
-    // Accept phone format: digits only, 7-15 chars, optionally with leading +
-    const phoneRegex = /^\+?\d{7,15}$/;
-    return phoneRegex.test(phone);
-}
-
-function validatePassword(password: string): boolean {
-    // Minimum 8 chars, at least one number, one uppercase, one lowercase
-    return password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password);
-}
+import { UnauthorizedError, ConflictError, BadRequestError, InternalError } from "../../errors/AppErrors.js";
 
 // Constant-time string comparison to prevent timing attacks
 function constantTimeCompare(a: string, b: string): boolean {
@@ -27,16 +15,9 @@ function constantTimeCompare(a: string, b: string): boolean {
 }
 
 export async function registerUser(phone: string, password: string) {
-    if (!validatePhone(phone)) {
-        throw new AppError("Invalid phone number format", 400, "INVALID_PHONE");
-    }
-    if (!validatePassword(password)) {
-        throw new AppError("Password must be at least 8 characters with uppercase, lowercase, and numbers", 400, "WEAK_PASSWORD");
-    }
-
     const existingUser = await userService.getUserByPhone(phone);
     if (existingUser) {
-        throw new AppError("Phone number already registered", 409, "USER_EXISTS");
+        throw new ConflictError("Phone number already registered", "USER_EXISTS");
     }
 
     const hashed = await bcrypt.hash(password, 12);
@@ -48,57 +29,40 @@ export async function registerUser(phone: string, password: string) {
         : "000000";
 
     const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
-    await userService.addOtp(phone, otp, otpExpiresAt);
-
-    if (process.env.NODE_ENV !== "production") {
-        console.log(`DEV MODE: OTP pour ${phone}: ${otp}`); 
-    }
+    //TODO: HASH OTP before storing for better security
+    await userService.addOtp(user.id, otp, otpExpiresAt);
 
     return user;
 }
 
 export async function verifyUser(phone: string, otp: string) {
-    if (!validatePhone(phone)) {
-        throw new AppError("Invalid phone number format", 400, "INVALID_PHONE");
-    }
-    if (!/^\d{6}$/.test(otp)) {
-        throw new AppError("Invalid OTP format", 400, "INVALID_OTP");
-    }
-
     const user = await userService.getUserByPhone(phone);
-    if (!user) {
-        throw new AppError("Verification failed", 401, "VERIFICATION_FAILED");
+    if (!user || !user.otpCode || !user.otpExpiresAt) {
+        throw new UnauthorizedError("Verification failed");
     }
 
     if (user.isVerified) {
-        throw new AppError("User already verified", 400, "ALREADY_VERIFIED");
+        throw new BadRequestError("User already verified", "ALREADY_VERIFIED");
     }
 
     // Check OTP expiration
-    if (!user.otpExpiresAt || new Date() > user.otpExpiresAt) {
-        throw new AppError("OTP expired. Request a new one.", 401, "OTP_EXPIRED");
+    if (new Date() > user.otpExpiresAt) {
+        throw new UnauthorizedError("OTP expired", "OTP_EXPIRED");
     }
 
     // Constant-time comparison to prevent timing attacks
     if (!constantTimeCompare(user.otpCode || "", otp)) {
-        throw new AppError("Verification failed", 401, "VERIFICATION_FAILED");
+        throw new UnauthorizedError("Verification failed", "VERIFICATION_FAILED");
     }
 
-    await userService.verifiedUser(phone);
+    await userService.verifiedUser(user.id);
 }
 
 export async function loginUser(phone: string, password: string) {
-    if (!validatePhone(phone)) {
-        throw new AppError("Invalid credentials", 401, "INVALID_CREDENTIALS");
-    }
-    if (!password || password.length === 0) {
-        throw new AppError("Invalid credentials", 401, "INVALID_CREDENTIALS");
-    }
-
     const user = await userService.getUserByPhone(phone);
     
-    if (!user || !user.isVerified) {
-        throw new AppError("Invalid credentials", 401, "INVALID_CREDENTIALS");
+    if (!user || !user.isVerified || !user.passwordHash) {
+        throw new UnauthorizedError("Invalid credentials", "INVALID_CREDENTIALS");
     }
 
     const ok = await bcrypt.compare(password, user.passwordHash!);
@@ -106,9 +70,14 @@ export async function loginUser(phone: string, password: string) {
         // TO DO
         // Add delay to mitigate brute force (optional, but recommended)
         // Ex: await new Promise(r => setTimeout(r, 500));
-        throw new AppError("Invalid credentials", 401, "INVALID_CREDENTIALS");
+        throw new UnauthorizedError("Invalid credentials", "INVALID_CREDENTIALS");
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, { expiresIn: "1d" });
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        throw new InternalError("JWT secret is not configured");
+    }
+
+    const token = jwt.sign({ userId: user.id }, secret, { expiresIn: "1d" });
     return token;
 }

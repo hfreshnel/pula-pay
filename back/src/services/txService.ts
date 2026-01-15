@@ -1,123 +1,165 @@
-import { Prisma, PrismaClient, TxStatus, EntryKind } from '@prisma/client';
-import accountService from './accountService.js';
+import { Prisma, TxStatus, EntryKind } from '@prisma/client';
 
-const prisma = new PrismaClient();
+import accountService from './accountService.js';
+import { prisma as defaultPrisma } from "./client.js";
+import { ConflictError, InternalError, NotFoundError } from '../errors/AppErrors.js';
+import { CreateDeposit, CreateWithdraw, CreateTransfer } from '../types/module.wallet.js';
+
+type PrismaTx = Prisma.TransactionClient;
+type Db = typeof defaultPrisma | PrismaTx;
+
+function dbClient(tx?: PrismaTx): Db {
+    return tx ?? defaultPrisma;
+}
+
+async function getOrCreateIdempotentTx(db: Db, idempotencyKey: string, createData: Prisma.TxCreateInput) {
+    try {
+        return await db.tx.create({ data: createData });
+    } catch (e: any) {
+        if (e.code === "P2002") {
+            return await db.tx.findUnique({ where: { idempotencyKey } });
+        }
+        throw e;
+    }
+}
 
 const txService = {
-    createDeposit: async function ({ idempotencyKey, currency, amount, userId, msisdn }:
-        {idempotencyKey: string, currency: string, amount: any, userId: string, msisdn: string}) {
-        const tx = await prisma.tx.create({
-            data: {
-                idempotencyKey: idempotencyKey,
-                status: TxStatus.PENDING,
-                kind: EntryKind.DEPOSIT,
-                currency: currency,
-                amount: amount as unknown as any, //code smell
-                meta: { userId, msisdn }
-            }
+    createDeposit: async function ({ idempotencyKey, currency, amount, userId, msisdn }: CreateDeposit, tx?: PrismaTx) {
+        const db = dbClient(tx);
+        const created = await getOrCreateIdempotentTx(db, idempotencyKey, {
+            idempotencyKey: idempotencyKey,
+            status: TxStatus.PENDING,
+            kind: EntryKind.DEPOSIT,
+            currency: currency,
+            amount: amount,
+            meta: { userId, msisdn }
         });
-        return tx.id;
+        if (!created) {
+            throw new InternalError("Failed to create or retrieve deposit transaction");
+        }
+
+        return created.id;
     },
 
-    createWithdraw: async function ({ idempotencyKey, currency, amount, userId, msisdn }:
-        {idempotencyKey: string, currency: string, amount: any, userId: string, msisdn: string}) {
-        const tx = await prisma.tx.create({
-            data: {
-                idempotencyKey: idempotencyKey,
-                status: TxStatus.PENDING,
-                kind: EntryKind.WITHDRAWAL,
-                currency: currency,
-                amount: amount as unknown as any, //code smell
-                meta: { userId, msisdn }
-            }
+    createWithdraw: async function ({ idempotencyKey, currency, amount, userId, msisdn }: CreateDeposit, tx?: PrismaTx) {
+        const db = dbClient(tx);
+        const created = await getOrCreateIdempotentTx(db, idempotencyKey, {
+            idempotencyKey: idempotencyKey,
+            status: TxStatus.PENDING,
+            kind: EntryKind.WITHDRAWAL,
+            currency: currency,
+            amount: amount,
+            meta: { userId, msisdn }
         });
-        return tx.id;
+        if (!created) {
+            throw new InternalError("Failed to create or retrieve withdrawal transaction");
+        }
+        return created.id;
     },
 
-    createTransfer: async function ({ senderId, receiverId, amount, currency, idempotencyKey } : 
-        { senderId: string, receiverId: string, amount: string, currency: string, idempotencyKey: string }) {
-        const existing = await prisma.tx.findUnique({ where: { idempotencyKey } }).catch(() => null);
-        if (existing) throw new Error("Existing idempotencyKey");
+    createTransfer: async function ({ senderId, receiverId, amount, currency, idempotencyKey, note }: CreateTransfer, tx?: PrismaTx) {
+        const db = dbClient(tx);
 
-        const [senderAcc, receiverAcc] = await Promise.all([
-            prisma.account.findFirst({ where: { userId: senderId, currency } }),
-            prisma.account.findFirst({ where: { userId: receiverId, currency } })
-        ]);
+        const transferTx = await getOrCreateIdempotentTx(db, idempotencyKey, {
+            idempotencyKey: idempotencyKey,
+            status: TxStatus.PENDING,
+            kind: EntryKind.TRANSFER,
+            currency: currency,
+            amount: amount,
+            meta: { senderId, receiverId, note }
+        });
 
-        if (!senderAcc) throw new Error("Sender account not found");
-        if (!receiverAcc) throw new Error("Receiver account not found");
+        if (!transferTx) {
+            throw new InternalError("Failed to create or retrieve transfer transaction");
+        }
 
-        const balance = await accountService.getAccountBalance(senderAcc.id);
-        const amt = new Prisma.Decimal(amount)
+        if (transferTx.status === TxStatus.SUCCESS || transferTx.status === TxStatus.FAILED) {
+            return transferTx.id;
+        }
 
-        if (balance.lessThan(amt)) throw new Error("Insufficient balance");
+        const existingEntries = await db.ledgerEntry.count({
+            where: { txId: transferTx.id },
+        });
 
-        return await prisma.$transaction(async (tx) => {
-            const transferTx = await tx.tx.create({
-                data: {
-                    idempotencyKey: idempotencyKey,
-                    status: TxStatus.PENDING,
-                    kind: EntryKind.TRANSFER,
-                    currency: currency,
-                    amount: amount,
-                    meta: { senderId, receiverId}
-                }
-            });
-
-            await tx.ledgerEntry.createMany({
+        if (existingEntries === 0) {
+            await db.ledgerEntry.createMany({
                 data: [
                     {
-                        accountId: senderAcc.id,
-                        debit: amt,
-                        credit: '0',
+                        accountId: senderId,
+                        debit: amount,
+                        credit: new Prisma.Decimal(0),
                         txId: transferTx.id,
-                        currency: currency
+                        currency,
                     },
                     {
-                        accountId: receiverAcc.id,
-                        debit: '0',
-                        credit: amt,
+                        accountId: receiverId,
+                        debit: new Prisma.Decimal(0),
+                        credit: amount,
                         txId: transferTx.id,
-                        currency: currency
-                    }
-                ]
+                        currency,
+                    },
+                ],
             });
+        }
 
-            const updateTx = await tx.tx.update({
-                where: { id: transferTx.id },
-                data: { status: TxStatus.SUCCESS }
-            });
-
-            return updateTx.id;
-        })
-    },
-
-    updateTx: async function (txId: string, status: TxStatus) {
-        await prisma.tx.update({ where: { id: txId }, data: { status: TxStatus.FAILED } });
-    },
-
-    getTx: async function (txId: string) {
-        const tx = await prisma.tx.findUnique({ where: { id: txId } });
-        return tx;
-    },
-
-    getTxs: async function (txIds: string[]) {
-        const txs = await prisma.tx.findMany({ 
-            where: { id: { in: txIds } },
-            orderBy: { createdAt: 'desc' }
+        await db.tx.update({
+            where: { id: transferTx.id },
+            data: { status: TxStatus.SUCCESS },
         });
-        return txs;
+
+        return transferTx.id;
     },
 
-    completeTransaction: async function (txId: string, fromAcc: { id: string }, toAcc: { id: string }, amountStr: string, currency: string) {
-        await prisma.$transaction(async (trx) => {
-            await trx.tx.update({ where: { id: txId }, data: { status: TxStatus.SUCCESS } });
-            await trx.ledgerEntry.createMany({
-                data: [
-                    { txId, accountId: fromAcc.id, debit: amountStr as any, credit: 0 as any, currency },
-                    { txId, accountId: toAcc.id, debit: 0 as any, credit: amountStr as any, currency }
-                ]
-            });
+    updateTx: async function (txId: string, status: TxStatus, tx?: PrismaTx) {
+        const db = dbClient(tx);
+        await db.tx.update({ where: { id: txId }, data: { status } });
+    },
+
+    getTx: async function (txId: string, tx?: PrismaTx) {
+        const db = dbClient(tx);
+        return await db.tx.findUnique({ where: { id: txId } });
+    },
+
+    getTxs: async function (txIds: string[], tx?: PrismaTx) {
+        const db = dbClient(tx);
+        if (txIds.length === 0) return [];
+        return db.tx.findMany({
+            where: { id: { in: txIds } },
+            orderBy: { createdAt: "desc" },
+        });
+    },
+
+    completeTransaction: async function (txId: string, fromAcc: { id: string }, toAcc: { id: string }, amount: Prisma.Decimal, currency: string, tx?: PrismaTx) {
+        const db = dbClient(tx);
+        const current = await db.tx.findUnique({ where: { id: txId } });
+        if (!current) throw new NotFoundError("Transaction not found", "TX_NOT_FOUND");
+        if (current.status === TxStatus.SUCCESS) return;
+        if (current.status === TxStatus.FAILED) {
+            throw new ConflictError("Transaction already failed", "TX_ALREADY_FAILED");
+        }
+
+        await db.tx.update({ where: { id: txId }, data: { status: TxStatus.SUCCESS } });
+
+        const existingEntries = await db.ledgerEntry.count({ where: { txId } });
+        if (existingEntries > 0) return;
+
+        await db.ledgerEntry.createMany({
+            data: [
+                {
+                    txId,
+                    accountId: fromAcc.id,
+                    debit: amount,
+                    credit: new Prisma.Decimal(0),
+                    currency,
+                },
+                {
+                    txId,
+                    accountId: toAcc.id,
+                    debit: new Prisma.Decimal(0),
+                    credit: amount,
+                    currency,
+                },
+            ],
         });
     }
 }
