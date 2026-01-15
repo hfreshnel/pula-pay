@@ -1,0 +1,123 @@
+{
+  "app": {
+    "name": "MoMo App"
+  },
+  "common": {
+    "phone": "Phone number",
+    "password": "Password",
+    "button": {
+      "submit": "Submit",
+      "cancel": "Cancel",
+      "confirm": "Back"
+    },
+    "errors": {
+      "network": "Network error. Please try again.",
+      "unknown": "An unknown error occurred. Please try again.",
+      "invalidPhone": "Invalid phone number."
+    }
+  },
+  "login": {
+    "title": "Login",
+    "phone": "Phone number",
+    "password": "Password",
+    "button": "Sign in",
+    "goToRegister": "Create an account"
+  },
+  "register": {
+    "title": "Create an account",
+    "phone": "Phone number",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "button": "Sign up",
+    "goToLogin": "Already have an account? Sign in",
+    "verifyButton": "Verify code"
+  },
+  "home": {
+    "welcome": "Welcome, {{phone}}",
+    "balance": "Balance"
+  },
+  "transactions": {
+    "title": "Transaction history",
+    "recentTitle": "Recent activity",
+    "seeAll": "See all",
+    "emptyTitle": "No transactions",
+    "emptySubtitle": "Your recent transactions will appear here",
+    "firstTransaction": "Make first transaction",
+    "searchPlaceholder": "Search by reference...",
+    "empty": "No transactions found",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing...",
+    "kind": {
+      "DEPOSIT": "Deposit",
+      "WITHDRAWAL": "Withdrawal",
+      "TRANSFER": "Transfer",
+      "REFUND": "Refund",
+      "FEE": "Fee",
+      "ADJUSTMENT": "Adjustment"
+    },
+    "status": {
+      "SUCCESS": "Success",
+      "FAILED": "Failed",
+      "CANCELLED": "Cancelled",
+      "PENDING": "Pending"
+    }
+  },
+  "wallet": {
+    "availableBalance": "Available balance",
+    "deposit": "Deposit",
+    "send": "Send",
+    "withdraw": "Withdraw",
+    "viewDetails": "View details",
+    "trendThisMonth": "+{{percent}}% this month"
+  },
+  "deposit": {
+    "title": "Top up wallet",
+    "success": "Deposit successful",
+    "method": "Method",
+    "phone": "Phone number",
+    "amount": "Amount",
+    "amountPlaceholder": "e.g. 100.00",
+    "submit": "Deposit",
+    "submitting": "Sending...",
+    "viewTransactions": "View transactions",
+    "txId": "Reference",
+    "methodNotSupported": "Method not yet supported"
+  },
+  "withdraw": {
+    "title": "Withdrawal request",
+    "success": "Withdrawal successful",
+    "method": "Payment method",
+    "phone": "Phone number",
+    "amount": "Amount to withdraw",
+    "amountPlaceholder": "e.g. 100.00",
+    "submit": "Withdraw",
+    "submitting": "Sending...",
+    "viewTransactions": "View transactions",
+    "txId": "Reference",
+    "methodNotSupported": "Method not yet supported"
+  },
+  "transfer": {
+    "title": "Send to PulaPay user",
+    "success": "Transfer successful",
+    "recipient": "Recipient",
+    "recipientPhone": "Recipient phone number",
+    "amount": "Amount",
+    "amountPlaceholder": "e.g. 2000",
+    "note": "Message (optional)",
+    "notePlaceholder": "e.g. Gift, contribution...",
+    "submit": "Send money",
+    "submitting": "Sending...",
+    "viewTransactions": "View transactions",
+    "txId": "Reference",
+    "userFound": "User found",
+    "fillAllFields": "Please fill in all required fields."
+  },
+  "errors": {
+    "unauthenticated": "User not authenticated",
+    "generic": "An error occurred",
+    "title": "Error",
+    "depositFailed": "Deposit failed",
+    "withdrawFailed": "Withdrawal failed",
+    "transferFailed": "Transfer failed"
+  }
+}
