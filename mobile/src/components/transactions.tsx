@@ -1,124 +1,276 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { useTransactions } from '../hooks/use-transactions';
-import { useAuthStore } from '../store/authStore';
+import { Search, RefreshCw, ArrowUpRight, ArrowDownRight, ArrowLeftRight, RotateCcw } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
+
+import { useWalletStore } from '../store/walletStore';
+import { useTheme } from '../theme';
+import { useStyles } from '../hooks/use-styles';
+import type { Theme } from '../theme/types';
+import type { TxDTO, EntryKind } from '../api/types';
+
+const KIND_ICONS: Record<EntryKind, typeof ArrowUpRight> = {
+    DEPOSIT: ArrowDownRight,
+    WITHDRAWAL: ArrowUpRight,
+    TRANSFER: ArrowLeftRight,
+    REFUND: RotateCcw,
+    FEE: ArrowUpRight,
+    ADJUSTMENT: RefreshCw,
+};
 
 export default function Transactions() {
-  const { transactions, loading, error, getTransactions } = useTransactions();
-  const { user } = useAuthStore();
-  const [query, setQuery] = useState('');
-  const [filteredTransactions, setFilteredTransactions] = useState([]);
+    const { t, i18n } = useTranslation();
+    const theme = useTheme();
+    const styles = useStyles(getStyles);
+    const { transactions, loading, error, fetchTransactions, currency } = useWalletStore();
+    const [query, setQuery] = useState('');
+    const locale = i18n.language === 'en' ? 'en-GB' : 'fr-FR';
 
-  useEffect(() => {
-    if (user?.id) {
-      getTransactions(user.id);
-    }
-  }, [user, getTransactions]);
+    const filteredTransactions = useMemo(() => {
+        if (!query) return transactions;
+        const lowerQuery = query.toLowerCase();
+        return transactions.filter(
+            (t) =>
+                t.externalId?.toLowerCase().includes(lowerQuery) ||
+                t.id.toLowerCase().includes(lowerQuery) ||
+                JSON.stringify(t.meta || '').toLowerCase().includes(lowerQuery)
+        );
+    }, [query, transactions]);
 
-  useEffect(() => {
-    if (query) {
-      const lowerQuery = query.toLowerCase();
-      setFilteredTransactions(
-        transactions.filter(
-          (t : any) =>
-            t.externalId?.toLowerCase().includes(lowerQuery) ||
-            t.id?.toLowerCase().includes(lowerQuery) ||
-            JSON.stringify(t.meta || '').toLowerCase().includes(lowerQuery)
-        )
-      );
-    } else {
-      setFilteredTransactions(transactions);
-    }
-  }, [query, transactions]);
+    useEffect(() => {
+        fetchTransactions();
+    }, [fetchTransactions]);
 
-  const renderTransaction = ({ item }) => (
-    <View style={styles.transactionItem}>
-      <Text style={styles.transactionId}>Référence: {item.externalId || item.id}</Text>
-      <Text>Type: {item.kind}</Text>
-      <Text>Montant: {item.amount} {item.currency || 'XOF'}</Text>
-      <Text>Statut: {item.status}</Text>
-      <Text>Date: {new Date(item.createdAt || item.created_date).toLocaleString('fr-FR')}</Text>
-    </View>
-  );
+    const formatAmount = (amount: string) => {
+        return new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency,
+            maximumFractionDigits: 2,
+        }).format(Number(amount || 0));
+    };
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Historique des transactions</Text>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Rechercher par référence ou description"
-        value={query}
-        onChangeText={setQuery}
-      />
-      {error && <Text style={styles.errorText}>Erreur: {String(error)}</Text>}
-      {loading ? (
-        <ActivityIndicator size="large" color="#7c3aed" style={styles.loader} />
-      ) : (
-        <FlatList
-          data={filteredTransactions}
-          keyExtractor={(item) => item.id}
-          renderItem={renderTransaction}
-          ListEmptyComponent={<Text style={styles.emptyText}>Aucune transaction trouvée</Text>}
-        />
-      )}
-      <TouchableOpacity style={styles.refreshButton} onPress={() => getTransactions(user?.id)} disabled={loading}>
-        <Text style={styles.refreshButtonText}>{loading ? 'Rafraîchissement...' : 'Rafraîchir'}</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    const formatDate = (dateStr: string) => {
+        return new Date(dateStr).toLocaleString(locale, {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    };
+
+    const getStatusStyle = (status: string) => {
+        switch (status) {
+            case 'SUCCESS': return styles.statusSuccess;
+            case 'FAILED': return styles.statusFailed;
+            case 'CANCELLED': return styles.statusCancelled;
+            default: return styles.statusPending;
+        }
+    };
+
+    const renderTransaction = ({ item }: { item: TxDTO }) => {
+        const Icon = KIND_ICONS[item.kind] || ArrowLeftRight;
+        const isCredit = item.kind === 'DEPOSIT' || item.kind === 'REFUND';
+
+        return (
+            <View style={styles.transactionItem}>
+                <View style={styles.txIcon}>
+                    <Icon color={theme.colors.primary} size={20} />
+                </View>
+                <View style={styles.txDetails}>
+                    <Text style={styles.txKind}>{t(`transactions.kind.${item.kind}`)}</Text>
+                    <Text style={styles.txRef}>{item.externalId || item.id.slice(0, 8)}</Text>
+                    <Text style={styles.txDate}>{formatDate(item.createdAt)}</Text>
+                </View>
+                <View style={styles.txRight}>
+                    <Text style={[styles.txAmount, isCredit ? styles.amountCredit : styles.amountDebit]}>
+                        {isCredit ? '+' : '-'}{formatAmount(item.amount)}
+                    </Text>
+                    <View style={[styles.statusBadge, getStatusStyle(item.status)]}>
+                        <Text style={styles.statusText}>{t(`transactions.status.${item.status}`)}</Text>
+                    </View>
+                </View>
+            </View>
+        );
+    };
+
+    return (
+        <View style={styles.container}>
+            <Text style={styles.title}>{t('transactions.title')}</Text>
+
+            <View style={styles.searchContainer}>
+                <Search color={theme.colors.textMuted} size={18} />
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder={t('transactions.searchPlaceholder')}
+                    placeholderTextColor={theme.colors.placeholder}
+                    value={query}
+                    onChangeText={setQuery}
+                />
+            </View>
+
+            {error && <Text style={styles.errorText}>{error}</Text>}
+
+            <FlatList
+                data={filteredTransactions}
+                keyExtractor={(item) => item.id}
+                renderItem={renderTransaction}
+                refreshing={loading}
+                onRefresh={fetchTransactions}
+                ListEmptyComponent={
+                    <Text style={styles.emptyText}>
+                        {loading ? '' : t('transactions.empty')}
+                    </Text>
+                }
+                contentContainerStyle={filteredTransactions.length === 0 && styles.emptyList}
+            />
+
+            <TouchableOpacity
+                style={[styles.refreshButton, loading && styles.refreshButtonDisabled]}
+                onPress={fetchTransactions}
+                disabled={loading}
+            >
+                {loading ? (
+                    <ActivityIndicator color={theme.colors.onPrimary} size="small" />
+                ) : (
+                    <RefreshCw color={theme.colors.onPrimary} size={18} />
+                )}
+                <Text style={styles.refreshButtonText}>
+                    {loading ? t('transactions.refreshing') : t('transactions.refresh')}
+                </Text>
+            </TouchableOpacity>
+        </View>
+    );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#f9f9f9',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 16,
-  },
-  transactionItem: {
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 12,
-    backgroundColor: '#fff',
-  },
-  transactionId: {
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  errorText: {
-    color: 'red',
-    marginBottom: 16,
-  },
-  loader: {
-    marginTop: 16,
-  },
-  emptyText: {
-    textAlign: 'center',
-    color: '#6b7280',
-    marginTop: 16,
-  },
-  refreshButton: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: '#7c3aed',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  refreshButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
+const getStyles = (theme: Theme) => StyleSheet.create({
+    container: {
+        flex: 1,
+        padding: theme.spacing.m,
+        backgroundColor: theme.colors.background,
+    },
+    title: {
+        ...theme.typography.h2,
+        color: theme.colors.text,
+        marginBottom: theme.spacing.m,
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.surface,
+        borderRadius: theme.borderRadius.m,
+        paddingHorizontal: theme.spacing.s,
+        marginBottom: theme.spacing.m,
+        borderWidth: 1,
+        borderColor: theme.colors.outline,
+    },
+    searchInput: {
+        flex: 1,
+        paddingVertical: theme.spacing.s,
+        paddingHorizontal: theme.spacing.s,
+        color: theme.colors.text,
+        fontSize: 14,
+    },
+    transactionItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: theme.spacing.m,
+        backgroundColor: theme.colors.surface,
+        borderRadius: theme.borderRadius.m,
+        marginBottom: theme.spacing.s,
+    },
+    txIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: theme.borderRadius.m,
+        backgroundColor: theme.colors.surfaceVariant,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: theme.spacing.s,
+    },
+    txDetails: {
+        flex: 1,
+    },
+    txKind: {
+        color: theme.colors.text,
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    txRef: {
+        color: theme.colors.textMuted,
+        fontSize: 12,
+        marginTop: 2,
+    },
+    txDate: {
+        color: theme.colors.textMuted,
+        fontSize: 11,
+        marginTop: 2,
+    },
+    txRight: {
+        alignItems: 'flex-end',
+    },
+    txAmount: {
+        fontWeight: '700',
+        fontSize: 14,
+    },
+    amountCredit: {
+        color: theme.colors.success,
+    },
+    amountDebit: {
+        color: theme.colors.danger,
+    },
+    statusBadge: {
+        paddingHorizontal: theme.spacing.xs,
+        paddingVertical: 2,
+        borderRadius: theme.borderRadius.s,
+        marginTop: 4,
+    },
+    statusText: {
+        fontSize: 10,
+        fontWeight: '600',
+        color: theme.colors.onPrimary,
+    },
+    statusSuccess: {
+        backgroundColor: theme.colors.success,
+    },
+    statusFailed: {
+        backgroundColor: theme.colors.danger,
+    },
+    statusCancelled: {
+        backgroundColor: theme.colors.secondary,
+    },
+    statusPending: {
+        backgroundColor: theme.colors.warning,
+    },
+    errorText: {
+        color: theme.colors.danger,
+        marginBottom: theme.spacing.m,
+        textAlign: 'center',
+    },
+    emptyText: {
+        textAlign: 'center',
+        color: theme.colors.textMuted,
+        marginTop: theme.spacing.xl,
+    },
+    emptyList: {
+        flexGrow: 1,
+        justifyContent: 'center',
+    },
+    refreshButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: theme.spacing.xs,
+        marginTop: theme.spacing.m,
+        padding: theme.spacing.m,
+        backgroundColor: theme.colors.primary,
+        borderRadius: theme.borderRadius.m,
+    },
+    refreshButtonDisabled: {
+        opacity: 0.7,
+    },
+    refreshButtonText: {
+        color: theme.colors.onPrimary,
+        fontWeight: '700',
+    },
 });

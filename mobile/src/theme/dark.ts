@@ -2,7 +2,8 @@ import { ColorPalette, Theme } from "./types";
 import { SPACING, BORDER_RADIUS, TYPOGRAPHY } from "@/src/constants/theme";
 
 const darkPalette: ColorPalette = {
-    primary: "#818cf8",
+    primary: "#a78bfa",
+    primaryDark: "#7c3aed",
     onPrimary: "#FFFFFF",
     secondary: "#475569",
     onSecondary: "#F8FAFC",
@@ -15,8 +16,12 @@ const darkPalette: ColorPalette = {
     inputBackground: "#0F172A",
     placeholder: "#64748b",
     success: "#4ade80",
+    successLight: "#14532d",
     danger: "#f87171",
+    dangerLight: "#7f1d1d",
     warning: "#fbbf24",
+    warningLight: "#78350f",
+    primaryLight: "#4c1d95",
 };
 
 const dark: Theme = {

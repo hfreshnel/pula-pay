@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { getMe } from '../api/users';
 import { Platform } from 'react-native';
 import { useWalletStore } from './walletStore';
-
+import { AuthState } from './types';
 
 // Storage layer: use localStorage on web, SecureStore on native
 const storage = {
@@ -31,28 +31,6 @@ const storage = {
             await SecureStore.deleteItemAsync(key);
         }
     }
-};
-
-type User = {
-    id: string;
-    phone: string;
-};
-
-type AuthStatus = "bootstrapping" | "authenticated" | "unauthenticated";
-
-type AuthError = { code: "TOKEN_INVALID" | "NETWORK_ERROR" | "UNKNOWN"; message: string } | null;
-
-type AuthState = {
-    token: string | null;
-    user: User | null;
-    status: AuthStatus;
-    error: AuthError;
-    bootstrapped: boolean;
-
-    bootstrap: () => Promise<void>;
-    login: (token: string) => Promise<void>;
-    logout: () => Promise<void>;
-    refreshUser: () => Promise<void>;
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({

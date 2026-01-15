@@ -35,5 +35,89 @@
     "home": {
         "welcome": "Bienvenue, {{phone}}",
         "balance": "Solde"
+    },
+    "transactions": {
+        "title": "Historique des transactions",
+        "recentTitle": "Activité récente",
+        "seeAll": "Voir tout",
+        "emptyTitle": "Aucune transaction",
+        "emptySubtitle": "Vos transactions récentes apparaîtront ici",
+        "firstTransaction": "Première transaction",
+        "searchPlaceholder": "Rechercher par référence...",
+        "empty": "Aucune transaction trouvée",
+        "refresh": "Rafraîchir",
+        "refreshing": "Rafraîchissement...",
+        "kind": {
+            "DEPOSIT": "Dépôt",
+            "WITHDRAWAL": "Retrait",
+            "TRANSFER": "Transfert",
+            "REFUND": "Remboursement",
+            "FEE": "Frais",
+            "ADJUSTMENT": "Ajustement"
+        },
+        "status": {
+            "SUCCESS": "Réussi",
+            "FAILED": "Échoué",
+            "CANCELLED": "Annulé",
+            "PENDING": "En cours"
+        }
+    },
+    "wallet": {
+        "availableBalance": "Solde disponible",
+        "deposit": "Recharger",
+        "send": "Envoyer",
+        "withdraw": "Retirer",
+        "viewDetails": "Voir les détails",
+        "trendThisMonth": "+{{percent}}% ce mois"
+    },
+    "deposit": {
+        "title": "Recharger le portefeuille",
+        "success": "Recharge effectuée",
+        "method": "Méthode",
+        "phone": "Numéro associé",
+        "amount": "Montant",
+        "amountPlaceholder": "Ex: 100.00",
+        "submit": "Recharger",
+        "submitting": "Envoi...",
+        "viewTransactions": "Voir transactions",
+        "txId": "Référence",
+        "methodNotSupported": "Méthode non encore supportée"
+    },
+    "withdraw": {
+        "title": "Demande de retrait",
+        "success": "Retrait effectué",
+        "method": "Moyen de paiement",
+        "phone": "Numéro associé",
+        "amount": "Montant à retirer",
+        "amountPlaceholder": "Ex: 100.00",
+        "submit": "Retirer",
+        "submitting": "Envoi...",
+        "viewTransactions": "Voir transactions",
+        "txId": "Référence",
+        "methodNotSupported": "Méthode non encore supportée"
+    },
+    "transfer": {
+        "title": "Transfert PulaPay → PulaPay",
+        "success": "Transfert P2P effectué",
+        "recipient": "Bénéficiaire",
+        "recipientPhone": "Numéro du bénéficiaire",
+        "amount": "Montant",
+        "amountPlaceholder": "Ex: 2000",
+        "note": "Message (optionnel)",
+        "notePlaceholder": "Ex: Participation, cadeau...",
+        "submit": "Envoyer l'argent",
+        "submitting": "Envoi...",
+        "viewTransactions": "Voir transactions",
+        "txId": "Référence",
+        "userFound": "Utilisateur trouvé",
+        "fillAllFields": "Veuillez remplir tous les champs requis."
+    },
+    "errors": {
+        "unauthenticated": "Utilisateur non authentifié",
+        "generic": "Une erreur est survenue",
+        "title": "Erreur",
+        "depositFailed": "Erreur lors du dépôt",
+        "withdrawFailed": "Erreur lors du retrait",
+        "transferFailed": "Erreur lors du transfert"
     }
 }

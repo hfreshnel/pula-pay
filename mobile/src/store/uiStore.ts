@@ -1,14 +1,5 @@
 import { create } from "zustand";
-
-type ThemeMode = "system" | "light" | "dark";
-type Language = "fr" | "en";
-
-type UIState = {
-    theme: ThemeMode;
-    language: Language;
-    setTheme: (mode: ThemeMode) => void;
-    setLanguage: (lang: Language) => void; 
-};
+import { UIState } from "./types";
 
 export const useUIStore = create<UIState>((set) => ({
     theme: "system",

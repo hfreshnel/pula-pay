@@ -3,6 +3,7 @@ import { TextStyle } from "react-native";
 export type ColorPalette = {
   // Brand colors
   primary: string;
+  primaryDark: string;
   onPrimary: string;
   secondary: string;
   onSecondary: string;
@@ -23,8 +24,14 @@ export type ColorPalette = {
 
   // Feedback
   success: string;
+  successLight: string;
   danger: string;
+  dangerLight: string;
   warning: string;
+  warningLight: string;
+
+  // Light variants
+  primaryLight: string;
 };
 
 export type Spacing = {

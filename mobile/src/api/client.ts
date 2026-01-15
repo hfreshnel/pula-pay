@@ -25,7 +25,7 @@ client.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const status = error.response?.status;
-    if (status !== 401) {
+    if (status === 401) {
         const store = useAuthStore.getState();
 
         if (!isLoggingOut) {

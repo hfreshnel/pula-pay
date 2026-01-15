@@ -1,91 +1,110 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native';
-import { useWithdraw } from '../../../hooks/use-withdraw';
-import { useAuthStore } from '../../../store/authStore';
+import { useTranslation } from 'react-i18next';
 import PhoneInput from 'react-native-international-phone-number';
-import Screen from '@/src/components/screen';
-import { ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { useTheme } from "@/src/theme";
-import { useStyles } from "@/src/hooks/use-styles";
-import type { Theme } from "@/src/theme/types";
-import Button from '../../../components/ui/button';
+import { ArrowLeft } from 'lucide-react-native';
+
+import { useAuthStore } from '@/src/store/authStore';
+import { useWalletStore } from '@/src/store/walletStore';
+import { useTheme } from '@/src/theme';
+import { useStyles } from '@/src/hooks/use-styles';
+import Screen from '@/src/components/screen';
+import Button from '@/src/components/ui/button';
+import type { Theme } from '@/src/theme/types';
 
 export default function Withdraw() {
+    const { t, i18n } = useTranslation();
     const theme = useTheme();
     const styles = useStyles(getStyles);
-    const [amount, setAmount] = useState('');
-    const [method, setMethod] = useState('MTN_MoMo');
+    const locale = i18n.language === 'en' ? 'en-GB' : 'fr-FR';
+
+    const [method] = useState('MTN_MoMo');
     const [phone, setPhone] = useState('');
-    const [submittedTx, setSubmittedTx] = useState<{ amount: string; recipient_phone: string; method: string; txId: string | null } | null>(null);
-    const { txId, status, loading, error, startWithdraw } = useWithdraw();
+    const [amount, setAmount] = useState('');
+    const [submittedTx, setSubmittedTx] = useState<{
+        amount: string;
+        phone: string;
+        method: string;
+        txId: string | null;
+    } | null>(null);
+
     const { user } = useAuthStore();
+    const { withdraw, loading, error, currency } = useWalletStore();
+
+    const formatAmount = (value: string) => {
+        return new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency,
+            maximumFractionDigits: 2,
+        }).format(Number(value || 0));
+    };
 
     useEffect(() => {
-        if (user?.phone) setPhone(user.phone);
-    }, [user]);
-
-    useEffect(() => {
-        if (status === 'SUCCESS' && !submittedTx) {
-            setSubmittedTx({
-                amount,
-                recipient_phone: phone,
-                method,
-                txId,
-            });
+        if (user?.phone) {
+            setPhone(user.phone);
         }
-    }, [status, submittedTx, amount, phone, method, txId]);
+    }, [user]);
 
     const handleSubmit = async () => {
         if (!user?.id) {
-            Alert.alert('Erreur', 'Utilisateur non authentifié');
+            Alert.alert(t('errors.title'), t('errors.unauthenticated'));
+            return;
+        }
+
+        if (method !== 'MTN_MoMo') {
+            Alert.alert(t('errors.title'), t('withdraw.methodNotSupported'));
             return;
         }
 
         try {
-            if (method === 'MTN_MoMo') {
-                await startWithdraw({ userId: user.id, amount, msisdn: phone, currency: 'EUR' });
-            } else {
-                Alert.alert('Erreur', 'Méthode non encore supportée');
-            }
+            const txId = await withdraw({ amount, msisdn: phone, currency: currency as any });
+            setSubmittedTx({
+                amount,
+                phone,
+                method,
+                txId,
+            });
         } catch (err: any) {
-            Alert.alert('Erreur retrait', err.message || 'Une erreur est survenue');
+            Alert.alert(t('errors.withdrawFailed'), err.message || t('errors.generic'));
         }
     };
 
     if (submittedTx) {
         return (
             <Screen>
-                <ArrowLeft onPress={() => router.replace("/(main)/wallet")} color={theme.colors.text} />
-                <Text style={styles.successTitle}>Retrait effectué</Text>
-                <View style={styles.detailsContainer}>
-                    <Text style={styles.label}>Méthode:</Text>
-                    <Text style={styles.value}>{submittedTx.method}</Text>
-                    <Text style={styles.label}>Montant:</Text>
-                    <Text style={styles.value}>{submittedTx.amount} €</Text>
-                    <Text style={styles.label}>Numéro:</Text>
-                    <Text style={styles.value}>{submittedTx.recipient_phone}</Text>
-                    {submittedTx.txId && (
-                        <>
-                            <Text style={styles.label}>txId:</Text>
-                            <Text style={styles.value}>{submittedTx.txId}</Text>
-                        </>
-                    )}
+                <ArrowLeft onPress={() => router.replace('/(main)/wallet')} color={theme.colors.text} />
+                <View style={styles.container}>
+                    <Text style={styles.successTitle}>{t('withdraw.success')}</Text>
+                    <View style={styles.detailsContainer}>
+                        <Text style={styles.label}>{t('withdraw.method')}:</Text>
+                        <Text style={styles.value}>{submittedTx.method}</Text>
+                        <Text style={styles.label}>{t('withdraw.amount')}:</Text>
+                        <Text style={styles.value}>{formatAmount(submittedTx.amount)}</Text>
+                        <Text style={styles.label}>{t('withdraw.phone')}:</Text>
+                        <Text style={styles.value}>{submittedTx.phone}</Text>
+                        {submittedTx.txId && (
+                            <>
+                                <Text style={styles.label}>{t('withdraw.txId')}:</Text>
+                                <Text style={styles.value}>{submittedTx.txId}</Text>
+                            </>
+                        )}
+                    </View>
+                    <Button title={t('withdraw.viewTransactions')} onPress={() => router.push('/history')} />
                 </View>
-                <Button title="Voir transactions" onPress={() => { router.push("/history") }} />
             </Screen>
         );
     }
 
     return (
         <Screen>
-            <ArrowLeft onPress={() => router.replace("/(main)/wallet")} color={theme.colors.text} />
-            <Text style={styles.title}>Demande de retrait</Text>
+            <ArrowLeft onPress={() => router.replace('/(main)/wallet')} color={theme.colors.text} />
+            <Text style={styles.title}>{t('withdraw.title')}</Text>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Montant à retirer (EUR)</Text>
+                <Text style={styles.label}>{t('withdraw.amount')} ({currency})</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder="Ex: 100.00"
+                    placeholder={t('withdraw.amountPlaceholder')}
                     value={amount}
                     onChangeText={setAmount}
                     keyboardType="numeric"
@@ -93,7 +112,7 @@ export default function Withdraw() {
                 />
             </View>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Moyen de paiement</Text>
+                <Text style={styles.label}>{t('withdraw.method')}</Text>
                 <TextInput
                     style={styles.input}
                     value={method}
@@ -102,21 +121,23 @@ export default function Withdraw() {
                 />
             </View>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Numéro associé</Text>
+                <Text style={styles.label}>{t('withdraw.phone')}</Text>
                 <PhoneInput
                     value={phone.slice(3)}
                     defaultCountry="BJ"
                     disabled
+                    ref={null}
+                    theme={theme.mode === 'dark' ? 'dark' : 'light'}
                 />
             </View>
             <Button
-                title={loading ? 'Envoi...' : 'Retirer'}
+                title={loading ? t('withdraw.submitting') : t('withdraw.submit')}
                 onPress={handleSubmit}
                 loading={loading}
                 disabled={loading || !amount}
             />
             {loading && <ActivityIndicator style={styles.loader} color={theme.colors.primary} />}
-            {error && <Text style={styles.error}>{String(error)}</Text>}
+            {error && <Text style={styles.error}>{error}</Text>}
         </Screen>
     );
 }

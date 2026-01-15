@@ -1,122 +1,135 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import PhoneInput, { ICountry } from 'react-native-international-phone-number';
-import { useRecipientId } from '../../../hooks/use-recipient-id';
-import { useTransfer } from '../../../hooks/use-transfert';
-import { useAuthStore } from '../../../store/authStore';
-import { sanitizeCountryCode, sanitizePhoneNumber } from "@/src/utils/phone";
-import Screen from '@/src/components/screen';
-import { ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { useTheme } from "@/src/theme";
-import { useStyles } from "@/src/hooks/use-styles";
-import type { Theme } from "@/src/theme/types";
-import Button from '../../../components/ui/button';
+import { ArrowLeft } from 'lucide-react-native';
 
-export default function Transfert() {
+import { useRecipientId } from '@/src/hooks/use-recipient-id';
+import { useAuthStore } from '@/src/store/authStore';
+import { useWalletStore } from '@/src/store/walletStore';
+import { sanitizeCountryCode, sanitizePhoneNumber } from '@/src/utils/phone';
+import { useTheme } from '@/src/theme';
+import { useStyles } from '@/src/hooks/use-styles';
+import Screen from '@/src/components/screen';
+import Button from '@/src/components/ui/button';
+import type { Theme } from '@/src/theme/types';
+
+export default function Transfer() {
+    const { t, i18n } = useTranslation();
     const theme = useTheme();
     const styles = useStyles(getStyles);
+    const locale = i18n.language === 'en' ? 'en-GB' : 'fr-FR';
+
     const [queryPhone, setQueryPhone] = useState('');
     const [recipientPhone, setRecipientPhone] = useState('');
-    const [contryCode, setCountryCode] = useState<null | ICountry>(null);
+    const [countryCode, setCountryCode] = useState<null | ICountry>(null);
     const [amount, setAmount] = useState('');
     const [note, setNote] = useState('');
-    const [submittedTx, setSubmittedTx] = useState<{ amount: string; recipientPhone: string | null; txId: string | null; } | null>(null);
-    const [ackTxId, setAckTxId] = useState(null);
+    const [submittedTx, setSubmittedTx] = useState<{
+        amount: string;
+        recipientPhone: string | null;
+        txId: string | null;
+    } | null>(null);
 
-    const { recipientId, error: getPhoneUserIdError, getPhoneUserId } = useRecipientId();
-    const { txId, status, loading, error, startTransfer } = useTransfer();
+    const { recipientId, error: recipientError, getPhoneUserId } = useRecipientId();
     const { user } = useAuthStore();
-    const userId = user?.id;
+    const { transfer, loading, error, currency } = useWalletStore();
 
+    const formatAmount = (value: string) => {
+        return new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency,
+            maximumFractionDigits: 2,
+        }).format(Number(value || 0));
+    };
+
+    // Debounced phone lookup
     useEffect(() => {
-        if (!userId || !queryPhone) return;
+        if (!user?.id || !queryPhone) return;
         const handler = setTimeout(() => {
-            const formattedPhone = `${sanitizeCountryCode(contryCode?.idd.root as string)}${sanitizePhoneNumber(queryPhone)}`;
+            const formattedPhone = `${sanitizeCountryCode(countryCode?.idd.root as string)}${sanitizePhoneNumber(queryPhone)}`;
             getPhoneUserId(formattedPhone);
         }, 400);
         return () => clearTimeout(handler);
-    }, [userId, queryPhone, getPhoneUserId, contryCode]);
+    }, [user?.id, queryPhone, getPhoneUserId, countryCode]);
 
+    // Set recipient phone when user is found
     useEffect(() => {
-        if (status === 'SUCCESS' && txId && txId !== ackTxId) {
+        if (recipientId && !recipientPhone && queryPhone) {
+            setRecipientPhone(`${sanitizeCountryCode(countryCode?.idd.root as string)}${sanitizePhoneNumber(queryPhone)}`);
+        }
+    }, [recipientId, queryPhone, recipientPhone, countryCode]);
+
+    const handleSubmit = async () => {
+        if (!recipientPhone || !amount || !recipientId || !user?.id) {
+            Alert.alert(t('errors.title'), t('transfer.fillAllFields'));
+            return;
+        }
+
+        try {
+            const txId = await transfer({
+                receiverId: recipientId,
+                amount: String(amount),
+                currency: currency as any,
+            });
             setSubmittedTx({
                 amount,
                 recipientPhone,
                 txId,
             });
-            setAckTxId(txId);
-        }
-    }, [status, submittedTx, amount, recipientPhone, txId, ackTxId]);
-
-    useEffect(() => {
-        if (recipientId && !recipientPhone && queryPhone) {
-            setRecipientPhone(`${sanitizeCountryCode(contryCode?.idd.root as string)}${sanitizePhoneNumber(queryPhone)}`);
-        }
-    }, [recipientId, queryPhone, recipientPhone, contryCode]);
-
-    const handleSubmit = async () => {
-        if (!recipientPhone || !amount || !recipientId || !userId) {
-            Alert.alert('Erreur', 'Veuillez remplir tous les champs requis.');
-            return;
-        }
-
-        try {
-            await startTransfer({
-                senderId: userId,
-                receiverId: recipientId,
-                amount: String(amount),
-                currency: 'EUR',
-                note,
-            });
         } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
-            Alert.alert('Erreur transfert', errorMessage);
+            const errorMessage = err instanceof Error ? err.message : t('errors.generic');
+            Alert.alert(t('errors.transferFailed'), errorMessage);
         }
     };
 
     if (submittedTx) {
         return (
             <Screen>
-                <ArrowLeft onPress={() => router.replace("/(main)/wallet")} color={theme.colors.text} />
-                <Text style={styles.successTitle}>Transfert P2P effectué</Text>
-                <View style={styles.detailsContainer}>
-                    <Text style={styles.label}>Bénéficiaire:</Text>
-                    <Text style={styles.value}>{submittedTx.recipientPhone}</Text>
-                    <Text style={styles.label}>Montant:</Text>
-                    <Text style={styles.value}>{submittedTx.amount} €</Text>
-                    <Text style={styles.label}>Référence:</Text>
-                    <Text style={styles.value}>{submittedTx.txId}</Text>
+                <ArrowLeft onPress={() => router.replace('/(main)/wallet')} color={theme.colors.text} />
+                <View style={styles.container}>
+                    <Text style={styles.successTitle}>{t('transfer.success')}</Text>
+                    <View style={styles.detailsContainer}>
+                        <Text style={styles.label}>{t('transfer.recipient')}:</Text>
+                        <Text style={styles.value}>{submittedTx.recipientPhone}</Text>
+                        <Text style={styles.label}>{t('transfer.amount')}:</Text>
+                        <Text style={styles.value}>{formatAmount(submittedTx.amount)}</Text>
+                        <Text style={styles.label}>{t('transfer.txId')}:</Text>
+                        <Text style={styles.value}>{submittedTx.txId}</Text>
+                    </View>
+                    <Button title={t('transfer.viewTransactions')} onPress={() => router.push('/history')} />
                 </View>
-                <Button title="Voir transactions" onPress={() => { router.push("/history") }} />
             </Screen>
         );
     }
 
     return (
         <Screen>
-            <ArrowLeft color={theme.colors.text} onPress={() => router.replace("/(main)/wallet")} />
-            <Text style={styles.title}>Transfert PulaPay → PulaPay</Text>
+            <ArrowLeft onPress={() => router.replace('/(main)/wallet')} color={theme.colors.text} />
+            <Text style={styles.title}>{t('transfer.title')}</Text>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Numéro du bénéficiaire</Text>
+                <Text style={styles.label}>{t('transfer.recipientPhone')}</Text>
                 <PhoneInput
                     value={queryPhone}
                     onChangePhoneNumber={setQueryPhone}
                     defaultCountry="BJ"
                     onChangeSelectedCountry={setCountryCode}
+                    ref={null}
+                    theme={theme.mode === 'dark' ? 'dark' : 'light'}
                 />
-                {recipientId && !getPhoneUserIdError && (
-                    <Text style={styles.successMessage}>Utilisateur trouvé: {queryPhone}</Text>
+                {recipientId && !recipientError && (
+                    <Text style={styles.successMessage}>{t('transfer.userFound')}: {queryPhone}</Text>
                 )}
-                {getPhoneUserIdError && queryPhone && (
-                    <Text style={styles.error}>{getPhoneUserIdError}</Text>
+                {recipientError && queryPhone && (
+                    <Text style={styles.error}>{recipientError}</Text>
                 )}
             </View>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Montant (EUR)</Text>
+                <Text style={styles.label}>{t('transfer.amount')} ({currency})</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder="Ex: 2000"
+                    placeholder={t('transfer.amountPlaceholder')}
                     value={amount}
                     onChangeText={setAmount}
                     keyboardType="numeric"
@@ -124,26 +137,27 @@ export default function Transfert() {
                 />
             </View>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Message (optionnel)</Text>
+                <Text style={styles.label}>{t('transfer.note')}</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder="Ex: Participation, cadeau..."
+                    placeholder={t('transfer.notePlaceholder')}
                     value={note}
                     onChangeText={setNote}
                     placeholderTextColor={theme.colors.placeholder}
                 />
             </View>
             <Button
-                title={loading ? 'Envoi...' : 'Envoyer l\'argent'}
+                title={loading ? t('transfer.submitting') : t('transfer.submit')}
                 onPress={handleSubmit}
                 loading={loading}
                 disabled={loading || !recipientPhone || !amount}
             />
             {loading && <ActivityIndicator style={styles.loader} color={theme.colors.primary} />}
-            {error && <Text style={styles.error}>{String(error)}</Text>}
+            {error && <Text style={styles.error}>{error}</Text>}
         </Screen>
     );
 }
+
 const getStyles = (theme: Theme) => StyleSheet.create({
     container: {
         flex: 1,

@@ -2,7 +2,8 @@ import { ColorPalette, Theme } from "./types";
 import { SPACING, BORDER_RADIUS, TYPOGRAPHY } from "@/src/constants/theme";
 
 const lightPalette: ColorPalette = {
-    primary: "#6366f1",
+    primary: "#7c3aed",
+    primaryDark: "#6d28d9",
     onPrimary: "#FFFFFF",
     secondary: "#94a3b8",
     onSecondary: "#FFFFFF",
@@ -15,8 +16,12 @@ const lightPalette: ColorPalette = {
     inputBackground: "#FFFFFF",
     placeholder: "#94a3b8",
     success: "#22c55e",
+    successLight: "#dcfce7",
     danger: "#ef4444",
+    dangerLight: "#fee2e2",
     warning: "#f59e0b",
+    warningLight: "#fef3c7",
+    primaryLight: "#ede9fe",
 };
 
 const light: Theme = {

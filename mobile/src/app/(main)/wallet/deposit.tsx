@@ -1,25 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native';
-import { useAuthStore } from '../../../store/authStore';
-import { useDeposit } from '../../../hooks/use-deposit';
+import { useTranslation } from 'react-i18next';
 import PhoneInput from 'react-native-international-phone-number';
-import Screen from '@/src/components/screen';
 import { router } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
-import { useTheme } from "@/src/theme";
-import { useStyles } from "@/src/hooks/use-styles";
-import type { Theme } from "@/src/theme/types";
-import Button from '../../../components/ui/button';
+
+import { useAuthStore } from '@/src/store/authStore';
+import { useWalletStore } from '@/src/store/walletStore';
+import { useTheme } from '@/src/theme';
+import { useStyles } from '@/src/hooks/use-styles';
+import Screen from '@/src/components/screen';
+import Button from '@/src/components/ui/button';
+import type { Theme } from '@/src/theme/types';
 
 export default function Deposit() {
+    const { t, i18n } = useTranslation();
     const theme = useTheme();
     const styles = useStyles(getStyles);
-    const [method, setMethod] = useState('MTN_MoMo');
+    const locale = i18n.language === 'en' ? 'en-GB' : 'fr-FR';
+
+    const [method] = useState('MTN_MoMo');
     const [phone, setPhone] = useState('');
     const [amount, setAmount] = useState('');
-    const [submittedTx, setSubmittedTx] = useState<{ amount: string; recipient_phone: string; method: string; txId: string | null } | null>(null);
+    const [submittedTx, setSubmittedTx] = useState<{
+        amount: string;
+        phone: string;
+        method: string;
+        txId: string | null;
+    } | null>(null);
+
     const { user } = useAuthStore();
-    const { txId, status, loading, error, startDeposit } = useDeposit();
+    const { deposit, loading, error, currency } = useWalletStore();
+
+    const formatAmount = (value: string) => {
+        return new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency,
+            maximumFractionDigits: 2,
+        }).format(Number(value || 0));
+    };
 
     useEffect(() => {
         if (user?.phone) {
@@ -27,55 +46,51 @@ export default function Deposit() {
         }
     }, [user]);
 
-    useEffect(() => {
-        if (status === 'SUCCESS' && !submittedTx) {
-            setSubmittedTx({
-                amount,
-                recipient_phone: phone,
-                method,
-                txId,
-            });
-        }
-    }, [status, submittedTx, amount, phone, method, txId]);
-
     const handleSubmit = async () => {
         if (!user?.id) {
-            Alert.alert('Erreur', 'Utilisateur non authentifié');
+            Alert.alert(t('errors.title'), t('errors.unauthenticated'));
+            return;
+        }
+
+        if (method !== 'MTN_MoMo') {
+            Alert.alert(t('errors.title'), t('deposit.methodNotSupported'));
             return;
         }
 
         try {
-            if (method === 'MTN_MoMo') {
-                await startDeposit({ userId: user.id, amount, msisdn: phone, currency: 'EUR' });
-            } else {
-                Alert.alert('Erreur', 'Méthode non encore supportée');
-            }
+            const txId = await deposit({ amount, msisdn: phone, currency: currency as any });
+            setSubmittedTx({
+                amount,
+                phone,
+                method,
+                txId,
+            });
         } catch (err: any) {
-            Alert.alert('Erreur dépôt', err.message || 'Une erreur est survenue');
+            Alert.alert(t('errors.depositFailed'), err.message || t('errors.generic'));
         }
     };
 
     if (submittedTx) {
         return (
             <Screen>
-                <ArrowLeft onPress={() => router.replace("/(main)/wallet")} color={theme.colors.text} />
+                <ArrowLeft onPress={() => router.replace('/(main)/wallet')} color={theme.colors.text} />
                 <View style={styles.container}>
-                    <Text style={styles.successTitle}>Recharge portefeuille effectué</Text>
+                    <Text style={styles.successTitle}>{t('deposit.success')}</Text>
                     <View style={styles.detailsContainer}>
-                        <Text style={styles.label}>Méthode:</Text>
+                        <Text style={styles.label}>{t('deposit.method')}:</Text>
                         <Text style={styles.value}>{submittedTx.method}</Text>
-                        <Text style={styles.label}>Montant:</Text>
-                        <Text style={styles.value}>{submittedTx.amount} €</Text>
-                        <Text style={styles.label}>Numéro:</Text>
-                        <Text style={styles.value}>{submittedTx.recipient_phone}</Text>
+                        <Text style={styles.label}>{t('deposit.amount')}:</Text>
+                        <Text style={styles.value}>{formatAmount(submittedTx.amount)}</Text>
+                        <Text style={styles.label}>{t('deposit.phone')}:</Text>
+                        <Text style={styles.value}>{submittedTx.phone}</Text>
                         {submittedTx.txId && (
                             <>
-                                <Text style={styles.label}>txId:</Text>
+                                <Text style={styles.label}>{t('deposit.txId')}:</Text>
                                 <Text style={styles.value}>{submittedTx.txId}</Text>
                             </>
                         )}
                     </View>
-                    <Button title="Voir transactions" onPress={() => { router.push("/history") }} />
+                    <Button title={t('deposit.viewTransactions')} onPress={() => router.push('/history')} />
                 </View>
             </Screen>
         );
@@ -83,10 +98,10 @@ export default function Deposit() {
 
     return (
         <Screen>
-            <ArrowLeft onPress={() => router.replace("/(main)/wallet")} color={theme.colors.text} />
-            <Text style={styles.title}>Recharger le portefeuille</Text>
+            <ArrowLeft onPress={() => router.replace('/(main)/wallet')} color={theme.colors.text} />
+            <Text style={styles.title}>{t('deposit.title')}</Text>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Méthode</Text>
+                <Text style={styles.label}>{t('deposit.method')}</Text>
                 <TextInput
                     style={styles.input}
                     value={method}
@@ -95,18 +110,20 @@ export default function Deposit() {
                 />
             </View>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Numéro associé</Text>
+                <Text style={styles.label}>{t('deposit.phone')}</Text>
                 <PhoneInput
                     value={phone.slice(3)}
                     defaultCountry="BJ"
                     disabled
+                    ref={null}
+                    theme={theme.mode === 'dark' ? 'dark' : 'light'}
                 />
             </View>
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Montant (EUR)</Text>
+                <Text style={styles.label}>{t('deposit.amount')} ({currency})</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder="Ex: 100.00"
+                    placeholder={t('deposit.amountPlaceholder')}
                     value={amount}
                     onChangeText={setAmount}
                     keyboardType="numeric"
@@ -114,15 +131,14 @@ export default function Deposit() {
                 />
             </View>
             <Button
-                title={loading ? 'Envoi...' : 'Recharger'}
+                title={loading ? t('deposit.submitting') : t('deposit.submit')}
                 onPress={handleSubmit}
                 loading={loading}
                 disabled={loading || !amount}
             />
             {loading && <ActivityIndicator style={styles.loader} color={theme.colors.primary} />}
-            {error && <Text style={styles.error}>{String(error)}</Text>}
+            {error && <Text style={styles.error}>{error}</Text>}
         </Screen>
-
     );
 }
 

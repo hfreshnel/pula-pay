@@ -3,25 +3,24 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "rea
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { Eye, EyeOff, RotateCw, Wallet, Plus, ArrowUpRight, ArrowDownRight, TrendingUp } from "lucide-react-native";
+import { useTranslation } from "react-i18next";
 
-import { useAuthStore } from "../store/authStore";
-import { useBalance } from "../hooks/use-balance";
+import { useWalletStore } from "../store/walletStore";
 import { useTheme } from "../theme";
 import { useStyles } from "../hooks/use-styles";
 import type { Theme } from "../theme/types";
 
 export default function WalletSummary() {
+    const { t, i18n } = useTranslation();
     const router = useRouter();
     const theme = useTheme();
     const styles = useStyles(getStyles);
-    const user = useAuthStore((s) => s.user);
-    console.log(`user: ${user?.id}`);
-    const { balance, loading, error, getBalance } = useBalance();
+    const { balance, currency, loading, fetchBalance } = useWalletStore();
     const [showBalance, setShowBalance] = useState(true);
-    const currency = "EUR";
+    const locale = i18n.language === 'en' ? 'en-GB' : 'fr-FR';
 
-    const formatAmount = (amount: Number | String) => {
-        return new Intl.NumberFormat("fr-FR", {
+    const formatAmount = (amount: number | string) => {
+        return new Intl.NumberFormat(locale, {
             style: "currency",
             currency,
             maximumFractionDigits: 2,
@@ -32,68 +31,61 @@ export default function WalletSummary() {
         if (!showBalance) return "••••••";
         if (balance === null) return "--";
         return formatAmount(balance);
-    }, [showBalance, balance]);
+    }, [showBalance, balance, currency]);
 
     useEffect(() => {
-        if (!user?.id) return;
-        (async () => {
-            await getBalance(user.id, currency);
-        })();
-    }, [user?.id, currency, getBalance]);
+        fetchBalance();
+    }, [fetchBalance]);
 
     return (
         <View style={styles.card}>
-            <LinearGradient colors={["#7c3aed", "#6d28d9"]} start={[0,0]} end={[1,1]} style={styles.header}>
+            <LinearGradient colors={[theme.colors.primary, theme.colors.primaryDark]} start={[0,0]} end={[1,1]} style={styles.header}>
                 <View style={styles.headerLeft}>
                     <View >
-                        <Wallet color="#fff" size={20} />
+                        <Wallet color={theme.colors.onPrimary} size={20} />
                     </View>
-                    <Text style={styles.small}>Solde disponible</Text>
+                    <Text style={styles.small}>{t('wallet.availableBalance')}</Text>
                     <View style={styles.rowTop}>
                         {loading ? (
-                            <ActivityIndicator color="#fff" />
+                            <ActivityIndicator color={theme.colors.onPrimary} />
                         ) : (
                             <Text style={styles.balance}>{maskedOrValue}</Text>
                         )}
                     </View>
-                    <View >
-                        <TrendingUp color="#bbf7d0" size={14} />
-                        <Text >+2.5% ce mois</Text>
+                    <View style={styles.trendRow}>
+                        <TrendingUp color={theme.colors.success} size={14} />
+                        <Text style={styles.trendText}>{t('wallet.trendThisMonth', { percent: '2.5' })}</Text>
                     </View>
                 </View>
 
                 <View style={styles.headerRight}>
                     <TouchableOpacity onPress={() => setShowBalance((s) => !s)} style={styles.iconButton}>
-                        {showBalance ? <Eye color="#fff" size={18} /> : <EyeOff color="#fff" size={18} />}
+                        {showBalance ? <Eye color={theme.colors.onPrimary} size={18} /> : <EyeOff color={theme.colors.onPrimary} size={18} />}
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => getBalance(user?.id as string, currency)} style={styles.iconButton}>
-                        <RotateCw color="#fff" size={18} />
+                    <TouchableOpacity onPress={fetchBalance} style={styles.iconButton}>
+                        <RotateCw color={theme.colors.onPrimary} size={18} />
                     </TouchableOpacity>
                 </View>
-
-                {/* decorative circles */}
-                <View pointerEvents="none" />
-                <View pointerEvents="none" />
             </LinearGradient>
 
             <View style={styles.actions}>
                 <TouchableOpacity style={[styles.actionBtn, styles.primary]} onPress={() => router.push('/wallet/deposit')}>
-                    <View ><Plus color="#fff" size={16} /></View>
-                    <Text style={styles.actionText}>Recharger</Text>
+                    <View ><Plus color={theme.colors.onPrimary} size={16} /></View>
+                    <Text style={styles.actionText}>{t('wallet.deposit')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.actionBtn, styles.success]} onPress={() => router.push('/wallet/transfert')}>
-                    <View ><ArrowUpRight color="#fff" size={16} /></View>
-                    <Text style={styles.actionText}>Envoyer</Text>
+                    <View ><ArrowUpRight color={theme.colors.onPrimary} size={16} /></View>
+                    <Text style={styles.actionText}>{t('wallet.send')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.actionBtn, styles.warn]} onPress={() => router.push('/wallet/withdraw')}>
-                    <View ><ArrowDownRight color="#fff" size={16} /></View>
-                    <Text style={styles.actionText}>Retirer</Text>
+                    <View ><ArrowDownRight color={theme.colors.onPrimary} size={16} /></View>
+                    <Text style={styles.actionText}>{t('wallet.withdraw')}</Text>
                 </TouchableOpacity>
             </View>
 
             <View style={styles.footer}>
                 <TouchableOpacity >
-                    <Text style={styles.details}>Voir les détails</Text>
+                    <Text style={styles.details}>{t('wallet.viewDetails')}</Text>
                 </TouchableOpacity>
             </View>
         </View>
@@ -130,6 +122,16 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     rowTop: {
         flexDirection: 'row',
         alignItems: 'center',
+    },
+    trendRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginTop: theme.spacing.xs,
+    },
+    trendText: {
+        color: theme.colors.success,
+        fontSize: 12,
     },
     balance: {
         color: theme.colors.onPrimary,
