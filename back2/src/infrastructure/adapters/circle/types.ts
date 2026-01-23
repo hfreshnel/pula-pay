@@ -13,6 +13,9 @@ export interface CircleWallet {
   accountType: string;
   updateDate: string;
   createDate: string;
+  refId?: string;
+  name?: string;
+  initialPublicKey?: string;
 }
 
 export interface CircleTokenBalance {

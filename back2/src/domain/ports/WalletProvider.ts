@@ -40,6 +40,18 @@ export interface EstimateFeeParams {
   tokenId: string;
 }
 
+export interface WalletDetails {
+  id: string;
+  address: string;
+  blockchain: string;
+  state: 'LIVE' | 'PENDING' | 'FROZEN';
+  walletSetId: string;
+  custodyType: string;
+  accountType: string;
+  userId?: string;
+  refId?: string;
+}
+
 /**
  * Port for blockchain wallet integration
  * Implemented by CircleWalletAdapter
@@ -49,6 +61,11 @@ export interface WalletProvider {
    * Create a new wallet for a user
    */
   createWallet(params: CreateWalletParams): Promise<WalletCreationResult>;
+
+  /**
+   * Get wallet details from Circle
+   */
+  getWallet(circleWalletId: string): Promise<WalletDetails>;
 
   /**
    * Get USDC balance for a wallet

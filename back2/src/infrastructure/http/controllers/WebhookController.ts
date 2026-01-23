@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ApiResponse } from '../../../shared/types';
 import { ConfirmDepositHandler } from '../../../application/commands/ConfirmDepositHandler';
+import { ActivateWalletHandler } from '../../../application/commands/ActivateWalletHandler';
 import { OnRampProvider } from '../../../domain/ports/OnRampProvider';
 import { logger } from '../../../shared/utils/logger';
 
@@ -21,13 +22,14 @@ interface CircleWebhookPayload {
     state: string;
     txHash?: string;
     amounts?: string[];
-    transactionType: string;
+    transactionType?: string;
   };
 }
 
 export class WebhookController {
   constructor(
     private readonly confirmDepositHandler: ConfirmDepositHandler,
+    private readonly activateWalletHandler: ActivateWalletHandler,
     private readonly momoProvider: OnRampProvider
   ) {}
 
@@ -126,7 +128,7 @@ export class WebhookController {
 
         case 'wallets':
           // Handle wallet state changes
-          // TODO: Implement wallet activation logic
+          await this.handleWalletStateChange(payload);
           break;
 
         default:
@@ -154,4 +156,34 @@ export class WebhookController {
       });
     }
   };
+
+  private async handleWalletStateChange(payload: CircleWebhookPayload): Promise<void> {
+    const { walletId, state } = payload.notification;
+
+    logger.info(
+      { circleWalletId: walletId, state },
+      'Processing wallet state change'
+    );
+
+    // Only activate if state is LIVE
+    if (state === 'LIVE') {
+      try {
+        await this.activateWalletHandler.execute({
+          circleWalletId: walletId,
+        });
+        logger.info({ circleWalletId: walletId }, 'Wallet activated via webhook');
+      } catch (error) {
+        logger.error(
+          { error, circleWalletId: walletId },
+          'Failed to activate wallet from webhook'
+        );
+        // Don't throw - we've logged the error and will return 200
+      }
+    } else {
+      logger.debug(
+        { circleWalletId: walletId, state },
+        'Wallet state change not actionable'
+      );
+    }
+  }
 }

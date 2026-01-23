@@ -65,10 +65,20 @@ export class CreateWalletHandler {
       blockchain,
     });
 
-    logger.info(
-      { userId: command.userId, walletId: wallet.id, address: wallet.address },
-      'Wallet created'
-    );
+    // If Circle returned LIVE status immediately, activate the wallet
+    if (circleResult.status === 'active') {
+      wallet.activate();
+      await this.walletRepo.update(wallet);
+      logger.info(
+        { userId: command.userId, walletId: wallet.id, address: wallet.address },
+        'Wallet created and immediately activated'
+      );
+    } else {
+      logger.info(
+        { userId: command.userId, walletId: wallet.id, address: wallet.address },
+        'Wallet created in pending state'
+      );
+    }
 
     return {
       walletId: wallet.id,

@@ -1,5 +1,5 @@
 import { Blockchain } from '@prisma/client';
-import { WalletProvider, CreateWalletParams, WalletCreationResult, WalletBalance, TransferParams, TransferResult, EstimateFeeParams } from '../../../domain/ports/WalletProvider';
+import { WalletProvider, CreateWalletParams, WalletCreationResult, WalletBalance, WalletDetails, TransferParams, TransferResult, EstimateFeeParams } from '../../../domain/ports/WalletProvider';
 import { config } from '../../../shared/config';
 import { encryptEntitySecret } from '../../../shared/utils';
 import { logger } from '../../../shared/utils/logger';
@@ -102,6 +102,27 @@ export class CircleWalletAdapter implements WalletProvider {
       walletSetId: this.walletSetId,
       address: wallet.address,
       status: wallet.state === 'LIVE' ? 'active' : 'pending',
+    };
+  }
+
+  async getWallet(circleWalletId: string): Promise<WalletDetails> {
+    const result = await this.request<{ wallet: CircleWallet }>(
+      'GET',
+      `/wallets/${circleWalletId}`
+    );
+
+    const wallet = result.wallet;
+
+    return {
+      id: wallet.id,
+      address: wallet.address,
+      blockchain: wallet.blockchain,
+      state: wallet.state,
+      walletSetId: wallet.walletSetId,
+      custodyType: wallet.custodyType,
+      accountType: wallet.accountType,
+      userId: wallet.userId,
+      refId: wallet.refId,
     };
   }
 

@@ -17,16 +17,18 @@ import { InitiateDepositHandler } from '../../../application/commands/InitiateDe
 import { InitiateWithdrawalHandler } from '../../../application/commands/InitiateWithdrawalHandler';
 import { ExecuteTransferHandler } from '../../../application/commands/ExecuteTransferHandler';
 import { ConfirmDepositHandler } from '../../../application/commands/ConfirmDepositHandler';
+import { ActivateWalletHandler } from '../../../application/commands/ActivateWalletHandler';
+import { SyncWalletStatusHandler } from '../../../application/commands/SyncWalletStatusHandler';
 import { GetBalanceHandler } from '../../../application/queries/GetBalanceHandler';
 import { GetTransactionHistoryHandler } from '../../../application/queries/GetTransactionHistoryHandler';
 import { GetExchangeRateHandler } from '../../../application/queries/GetExchangeRateHandler';
+import { GetWalletAddressHandler } from '../../../application/queries/GetWalletAddressHandler';
 import { CurrencyConversionService } from '../../../application/services/CurrencyConversionService';
 
 // Repositories
 import { PrismaUserRepository } from '../../persistence/repositories/PrismaUserRepository';
 import { PrismaWalletRepository } from '../../persistence/repositories/PrismaWalletRepository';
 import { PrismaTransactionRepository } from '../../persistence/repositories/PrismaTransactionRepository';
-import { PrismaLedgerEntryRepository } from '../../persistence/repositories/PrismaLedgerEntryRepository';
 
 // Adapters
 import { CircleWalletAdapter } from '../../adapters/circle/CircleWalletAdapter';
@@ -41,7 +43,6 @@ export function createRouter(prisma: PrismaClient): Router {
   const userRepo = new PrismaUserRepository(prisma);
   const walletRepo = new PrismaWalletRepository(prisma);
   const txRepo = new PrismaTransactionRepository(prisma);
-  const ledgerRepo = new PrismaLedgerEntryRepository(prisma);
 
   // Initialize adapters
   const circleAdapter = new CircleWalletAdapter();
@@ -53,17 +54,20 @@ export function createRouter(prisma: PrismaClient): Router {
   const createWalletHandler = new CreateWalletHandler(userRepo, walletRepo, circleAdapter);
   const depositHandler = new InitiateDepositHandler(walletRepo, txRepo, momoAdapter, exchangeRateAdapter);
   const withdrawHandler = new InitiateWithdrawalHandler(walletRepo, txRepo, momoAdapter, exchangeRateAdapter);
-  const transferHandler = new ExecuteTransferHandler( prisma, walletRepo, txRepo, ledgerRepo, circleAdapter, exchangeRateAdapter);
-  const confirmDepositHandler = new ConfirmDepositHandler(prisma, txRepo, walletRepo, ledgerRepo);
+  const transferHandler = new ExecuteTransferHandler( prisma, walletRepo, txRepo, circleAdapter, exchangeRateAdapter);
+  const confirmDepositHandler = new ConfirmDepositHandler(prisma, txRepo, walletRepo);
+  const activateWalletHandler = new ActivateWalletHandler(walletRepo, circleAdapter);
+  const syncWalletStatusHandler = new SyncWalletStatusHandler(walletRepo, circleAdapter);
   const balanceHandler = new GetBalanceHandler(userRepo, walletRepo, exchangeRateAdapter);
   const historyHandler = new GetTransactionHistoryHandler(walletRepo, txRepo);
+  const addressHandler = new GetWalletAddressHandler(walletRepo);
   const rateHandler = new GetExchangeRateHandler(exchangeRateAdapter);
   const conversionService = new CurrencyConversionService(exchangeRateAdapter);
 
   // Initialize controllers
   const authController = new AuthController(userRepo);
-  const walletController = new WalletController( createWalletHandler, depositHandler, withdrawHandler, transferHandler, balanceHandler, historyHandler);
-  const webhookController = new WebhookController(confirmDepositHandler, momoAdapter);
+  const walletController = new WalletController(createWalletHandler, depositHandler, withdrawHandler, transferHandler, syncWalletStatusHandler, balanceHandler, historyHandler, addressHandler);
+  const webhookController = new WebhookController(confirmDepositHandler, activateWalletHandler, momoAdapter);
   const rateController = new ExchangeRateController(rateHandler, conversionService);
   const healthController = new HealthController(prisma);
 
@@ -93,7 +97,9 @@ export function createRouter(prisma: PrismaClient): Router {
 
   // Protected wallet routes
   router.post('/wallet', authMiddleware, walletController.createWallet);
+  router.get('/wallet/address', authMiddleware, walletController.getAddress);
   router.get('/wallet/balance', authMiddleware, walletController.getBalance);
+  router.post('/wallet/sync-status', authMiddleware, walletController.syncWalletStatus);
   router.post('/wallet/deposit', authMiddleware, walletController.initiateDeposit);
   router.post('/wallet/withdraw', authMiddleware, walletController.initiateWithdrawal);
   router.post('/wallet/transfer', authMiddleware, walletController.transfer);

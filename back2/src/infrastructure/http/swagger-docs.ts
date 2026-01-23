@@ -419,6 +419,50 @@
 
 /**
  * @swagger
+ * /wallet/sync-status:
+ *   post:
+ *     summary: Sync wallet status
+ *     description: Manually sync wallet status with Circle. Useful for activating wallets stuck in PENDING state.
+ *     tags: [Wallet]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Wallet status synced successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         walletId:
+ *                           type: string
+ *                           description: Wallet ID
+ *                         previousStatus:
+ *                           type: string
+ *                           description: Status before sync
+ *                           example: PENDING
+ *                         currentStatus:
+ *                           type: string
+ *                           description: Status after sync
+ *                           example: ACTIVE
+ *                         wasUpdated:
+ *                           type: boolean
+ *                           description: Whether the status was changed
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Wallet not found
+ *       500:
+ *         description: Failed to sync with Circle
+ */
+
+/**
+ * @swagger
  * /wallet/deposit:
  *   post:
  *     summary: Initiate a deposit

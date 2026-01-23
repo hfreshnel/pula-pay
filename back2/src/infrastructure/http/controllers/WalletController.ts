@@ -6,8 +6,10 @@ import { CreateWalletHandler, CreateWalletResult } from '../../../application/co
 import { InitiateDepositHandler, InitiateDepositResult } from '../../../application/commands/InitiateDepositHandler';
 import { InitiateWithdrawalHandler, InitiateWithdrawalResult } from '../../../application/commands/InitiateWithdrawalHandler';
 import { ExecuteTransferHandler, TransferResult } from '../../../application/commands/ExecuteTransferHandler';
+import { SyncWalletStatusHandler, SyncWalletStatusResult } from '../../../application/commands/SyncWalletStatusHandler';
 import { GetBalanceHandler, GetBalanceResult } from '../../../application/queries/GetBalanceHandler';
 import { GetTransactionHistoryHandler, GetTransactionHistoryResult } from '../../../application/queries/GetTransactionHistoryHandler';
+import { GetWalletAddressHandler, GetWalletAddressResult } from '../../../application/queries/GetWalletAddressHandler';
 
 // Validation schemas
 const createWalletSchema = z.object({
@@ -52,8 +54,10 @@ export class WalletController {
     private readonly depositHandler: InitiateDepositHandler,
     private readonly withdrawHandler: InitiateWithdrawalHandler,
     private readonly transferHandler: ExecuteTransferHandler,
+    private readonly syncStatusHandler: SyncWalletStatusHandler,
     private readonly balanceHandler: GetBalanceHandler,
-    private readonly historyHandler: GetTransactionHistoryHandler
+    private readonly historyHandler: GetTransactionHistoryHandler,
+    private readonly addressHandler: GetWalletAddressHandler
   ) {}
 
   createWallet = async (
@@ -204,6 +208,57 @@ export class WalletController {
         toDate: query.toDate ? new Date(query.toDate) : undefined,
         page: query.page,
         limit: query.limit,
+      });
+
+      res.json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getAddress = async (
+    req: Request,
+    res: Response<ApiResponse<GetWalletAddressResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const result = await this.addressHandler.execute({
+        userId: req.userId!,
+      });
+
+      res.json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  syncWalletStatus = async (
+    req: Request,
+    res: Response<ApiResponse<SyncWalletStatusResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      // First get user's wallet ID
+      const balanceResult = await this.balanceHandler.execute({
+        userId: req.userId!,
+      });
+
+      const result = await this.syncStatusHandler.execute({
+        walletId: balanceResult.walletId,
       });
 
       res.json({
