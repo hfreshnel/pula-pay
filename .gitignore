@@ -4,6 +4,7 @@ Thumbs.db
 
 # IDEs
 .vscode/
+.mcp.json
 
 # Build outputs
 bin/
@@ -26,3 +27,7 @@ yarn-error.log
 # Env / secrets
 .env
 *.local.json
+
+# tests
+**/coverage/
+**/__tests__/
