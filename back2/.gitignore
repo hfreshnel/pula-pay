@@ -1,0 +1,28 @@
+# Build outputs
+bin/
+obj/
+build/
+dist/
+out/
+*.exe
+*.dll
+*.pdb
+*.log
+*.cache
+*.tmp
+dist
+dist-ssr
+*.local
+
+# Node
+node_modules
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Env / secrets
+.env
+*.local.json
+
+#Other
+pula-pay-circle-migration.md

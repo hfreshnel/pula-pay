@@ -1,19 +1,25 @@
 import { useState, useCallback } from "react";
-import { getRecipientId } from "../api/transactions";
+import { resolveRecipientId } from "../api/wallet";
+import { getApiError, type ApiErrorCode } from "../utils/api-error";
 
 export function useRecipientId() {
     const [recipientId, setRecipientId] = useState<string | null>(null);
-    const [error, setError] = useState(null);
+    const [errorKey, setErrorKey] = useState<string | null>(null);
+    const [errorCode, setErrorCode] = useState<ApiErrorCode | null>(null);
 
     const getPhoneUserId = useCallback(async (phone: string) => {
-        setError(null);
+        setErrorKey(null);
+        setErrorCode(null);
+        setRecipientId(null);
         try {
-            const { userId } = await getRecipientId(phone);
+            const userId = await resolveRecipientId(phone);
             setRecipientId(userId);
-        } catch (e: any) {
-            setError(e?.response?.data?.error || e.message || "Failed to get user");
+        } catch (e: unknown) {
+            const { code, translationKey } = getApiError(e);
+            setErrorCode(code);
+            setErrorKey(translationKey);
         }
     }, []);
 
-    return { recipientId, error, getPhoneUserId };
+    return { recipientId, errorKey, errorCode, getPhoneUserId };
 }

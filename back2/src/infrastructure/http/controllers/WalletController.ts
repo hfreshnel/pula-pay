@@ -1,0 +1,362 @@
+import { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
+import { Currency, TxType, TxStatus, Blockchain } from '@prisma/client';
+import { ApiResponse } from '../../../shared/types';
+import { CreateWalletHandler, CreateWalletResult } from '../../../application/commands/CreateWalletHandler';
+import { InitiateDepositHandler, InitiateDepositResult } from '../../../application/commands/InitiateDepositHandler';
+import { InitiateWithdrawalHandler, InitiateWithdrawalResult } from '../../../application/commands/InitiateWithdrawalHandler';
+import { ExecuteTransferHandler, TransferResult } from '../../../application/commands/ExecuteTransferHandler';
+import { ExecuteSimpleTransferHandler, SimpleTransferResult } from '../../../application/commands/ExecuteSimpleTransferHandler';
+import { SyncWalletStatusHandler, SyncWalletStatusResult } from '../../../application/commands/SyncWalletStatusHandler';
+import { GetBalanceHandler, GetBalanceResult } from '../../../application/queries/GetBalanceHandler';
+import { GetTransactionHistoryHandler, GetTransactionHistoryResult } from '../../../application/queries/GetTransactionHistoryHandler';
+import { GetTransactionByIdHandler, GetTransactionByIdResult } from '../../../application/queries/GetTransactionByIdHandler';
+import { GetWalletAddressHandler, GetWalletAddressResult } from '../../../application/queries/GetWalletAddressHandler';
+import { ResolveRecipientHandler, ResolveRecipientResult } from '../../../application/queries/ResolveRecipientHandler';
+
+// Validation schemas
+const createWalletSchema = z.object({
+  blockchain: z.nativeEnum(Blockchain).optional(),
+});
+
+const depositSchema = z.object({
+  phoneNumber: z.string().min(8).max(15),
+  amount: z.number().positive(),
+  currency: z.nativeEnum(Currency),
+});
+
+const withdrawSchema = z.object({
+  phoneNumber: z.string().min(8).max(15),
+  amount: z.number().positive(),  // Amount in target currency (fiat)
+  targetCurrency: z.nativeEnum(Currency),
+});
+
+const transferSchema = z.object({
+  recipientPhone: z.string().min(8).max(15).optional(),
+  recipientAddress: z.string().optional(),
+  amount: z.number().positive(),
+  currency: z.nativeEnum(Currency),
+  description: z.string().max(200).optional(),
+}).refine(
+  (data) => data.recipientPhone || data.recipientAddress,
+  { message: 'Either recipientPhone or recipientAddress must be provided' }
+);
+
+const historyQuerySchema = z.object({
+  type: z.nativeEnum(TxType).optional(),
+  status: z.nativeEnum(TxStatus).optional(),
+  fromDate: z.string().datetime().optional(),
+  toDate: z.string().datetime().optional(),
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().max(100).optional(),
+});
+
+const resolveRecipientSchema = z.object({
+  phone: z.string().min(8).max(15).optional(),
+  address: z.string().optional(),
+}).refine(
+  (data) => data.phone || data.address,
+  { message: 'Either phone or address must be provided' }
+);
+
+export class WalletController {
+  constructor(
+    private readonly createWalletHandler: CreateWalletHandler,
+    private readonly depositHandler: InitiateDepositHandler,
+    private readonly withdrawHandler: InitiateWithdrawalHandler,
+    private readonly transferHandler: ExecuteTransferHandler,
+    private readonly simpleTransferHandler: ExecuteSimpleTransferHandler,
+    private readonly syncStatusHandler: SyncWalletStatusHandler,
+    private readonly balanceHandler: GetBalanceHandler,
+    private readonly historyHandler: GetTransactionHistoryHandler,
+    private readonly transactionByIdHandler: GetTransactionByIdHandler,
+    private readonly addressHandler: GetWalletAddressHandler,
+    private readonly resolveRecipientHandler: ResolveRecipientHandler
+  ) {}
+
+  createWallet = async (
+    req: Request,
+    res: Response<ApiResponse<CreateWalletResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const data = createWalletSchema.parse(req.body);
+      const result = await this.createWalletHandler.execute({
+        userId: req.userId!,
+        blockchain: data.blockchain,
+      });
+
+      res.status(201).json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getBalance = async (
+    req: Request,
+    res: Response<ApiResponse<GetBalanceResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const currency = req.query.currency as Currency | undefined;
+      const result = await this.balanceHandler.execute({
+        userId: req.userId!,
+        displayCurrency: currency,
+      });
+
+      res.json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  initiateDeposit = async (
+    req: Request,
+    res: Response<ApiResponse<InitiateDepositResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const data = depositSchema.parse(req.body);
+      const result = await this.depositHandler.execute({
+        userId: req.userId!,
+        phoneNumber: data.phoneNumber,
+        fiatAmount: data.amount,
+        fiatCurrency: data.currency,
+      });
+
+      res.status(202).json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  initiateWithdrawal = async (
+    req: Request,
+    res: Response<ApiResponse<InitiateWithdrawalResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const data = withdrawSchema.parse(req.body);
+      const result = await this.withdrawHandler.execute({
+        userId: req.userId!,
+        phoneNumber: data.phoneNumber,
+        fiatAmount: data.amount,
+        fiatCurrency: data.targetCurrency,
+      });
+
+      res.status(202).json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  transfer = async (
+    req: Request,
+    res: Response<ApiResponse<TransferResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const data = transferSchema.parse(req.body);
+      const result = await this.transferHandler.execute({
+        senderUserId: req.userId!,
+        recipientPhone: data.recipientPhone,
+        recipientWalletAddress: data.recipientAddress,
+        amount: data.amount,
+        currency: data.currency,
+        description: data.description,
+      });
+
+      res.status(202).json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  simpleTransfer = async (
+    req: Request,
+    res: Response<ApiResponse<SimpleTransferResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const data = transferSchema.parse(req.body);
+      const result = await this.simpleTransferHandler.execute({
+        senderUserId: req.userId!,
+        recipientPhone: data.recipientPhone,
+        recipientAddress: data.recipientAddress,
+        amount: data.amount,
+        currency: data.currency,
+        description: data.description,
+      });
+
+      res.status(202).json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getTransactionHistory = async (
+    req: Request,
+    res: Response<ApiResponse<GetTransactionHistoryResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const query = historyQuerySchema.parse(req.query);
+      const result = await this.historyHandler.execute({
+        userId: req.userId!,
+        type: query.type,
+        status: query.status,
+        fromDate: query.fromDate ? new Date(query.fromDate) : undefined,
+        toDate: query.toDate ? new Date(query.toDate) : undefined,
+        page: query.page,
+        limit: query.limit,
+      });
+
+      res.json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getTransaction = async (
+    req: Request,
+    res: Response<ApiResponse<GetTransactionByIdResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { txId } = req.params;
+      const result = await this.transactionByIdHandler.execute({
+        userId: req.userId!,
+        transactionId: txId,
+      });
+
+      res.json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getAddress = async (
+    req: Request,
+    res: Response<ApiResponse<GetWalletAddressResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const result = await this.addressHandler.execute({
+        userId: req.userId!,
+      });
+
+      res.json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  syncWalletStatus = async (
+    req: Request,
+    res: Response<ApiResponse<SyncWalletStatusResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      // First get user's wallet ID
+      const balanceResult = await this.balanceHandler.execute({
+        userId: req.userId!,
+      });
+
+      const result = await this.syncStatusHandler.execute({
+        walletId: balanceResult.walletId,
+      });
+
+      res.json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  resolveRecipient = async (
+    req: Request,
+    res: Response<ResolveRecipientResult>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const query = resolveRecipientSchema.parse(req.query);
+      const result = await this.resolveRecipientHandler.execute({
+        phone: query.phone,
+        address: query.address,
+      });
+
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+}

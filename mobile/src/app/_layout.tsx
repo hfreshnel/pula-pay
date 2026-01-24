@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { useAuthStore } from "../store/authStore";
 import { useTheme } from "../theme";
+import { ToastContainer } from "../components/ui/toast-container";
 
 export default function RootLayout() {
     const theme = useTheme();
@@ -35,5 +36,10 @@ export default function RootLayout() {
         );
     }
 
-    return <Slot />;
+    return (
+        <>
+            <Slot />
+            <ToastContainer />
+        </>
+    );
 }

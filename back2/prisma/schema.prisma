@@ -1,0 +1,337 @@
+// Pula Pay v2 - Schema Prisma
+// Architecture Circle Programmable Wallets + USDC
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTH
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  phone         String    @unique
+  email         String?   @unique
+  passwordHash  String
+  
+  // KYC
+  kycLevel      KycLevel  @default(NONE)
+  kycData       Json?
+  
+  // Préférences
+  displayCurrency  Currency @default(XOF)
+  locale           String   @default("fr-BJ")
+  
+  // OTP
+  otpHash       String?
+  otpExpiresAt  DateTime?
+  
+  // Relations
+  wallet        Wallet?
+  
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([phone])
+  @@index([email])
+  @@map("users")
+}
+
+enum KycLevel {
+  NONE
+  BASIC      // Phone vérifié
+  VERIFIED   // ID vérifié
+  ENHANCED   // Adresse vérifiée
+}
+
+enum Currency {
+  EUR
+  XOF
+  USD
+}
+
+// ============================================
+// WALLET (Circle Programmable Wallet)
+// ============================================
+
+model Wallet {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Circle Wallet Data
+  circleWalletId  String   @unique  // ID retourné par Circle
+  walletSetId     String             // Circle Wallet Set
+  address         String   @unique   // Adresse blockchain (ex: 0x...)
+  blockchain      Blockchain @default(POLYGON_AMOY)
+  
+  // État
+  status          WalletStatus @default(PENDING)
+  
+  // Balance locale (synced avec Circle)
+  balanceUsdc     Decimal  @default(0) @db.Decimal(18, 6)
+  
+  // Relations
+  transactions    Transaction[]
+  ledgerEntries   LedgerEntry[]
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([circleWalletId])
+  @@index([address])
+  @@index([status])
+  @@map("wallets")
+}
+
+enum Blockchain {
+  // Testnets
+  POLYGON_AMOY
+  ETH_SEPOLIA
+  ARBITRUM_SEPOLIA
+  // Mainnets (pour plus tard)
+  POLYGON
+  ARBITRUM
+  ETHEREUM
+}
+
+enum WalletStatus {
+  PENDING      // Création en cours côté Circle
+  ACTIVE       // Prêt à l'emploi
+  FROZEN       // Gelé (fraude, KYC)
+  CLOSED       // Fermé définitivement
+}
+
+// ============================================
+// TRANSACTIONS
+// ============================================
+
+model Transaction {
+  id              String    @id @default(cuid())
+  
+  // Référence
+  idempotencyKey  String    @unique
+  externalRef     String?   @unique  // Ref Circle ou MoMo
+  
+  // Type & État
+  type            TxType
+  status          TxStatus  @default(PENDING)
+  
+  // Montants (toujours en USDC, 6 décimales)
+  amountUsdc      Decimal   @db.Decimal(18, 6)
+  feeUsdc         Decimal   @default(0) @db.Decimal(18, 6)
+  
+  // Taux de change au moment de la transaction
+  exchangeRate    Decimal?  @db.Decimal(18, 8)  // USDC/EUR ou USDC/XOF
+  displayCurrency Currency?
+  displayAmount   Decimal?  @db.Decimal(18, 2)  // Montant affiché à l'user
+  
+  // Parties
+  walletId        String
+  wallet          Wallet    @relation(fields: [walletId], references: [id])
+  counterpartyId  String?   // Wallet ID pour P2P, null pour on/off ramp
+  
+  // Metadata
+  description     String?
+  metadata        Json?     // Provider-specific data
+  failureReason   String?
+  
+  // Relations
+  ledgerEntries   LedgerEntry[]
+  onRampDetails   OnRampTransaction?
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  completedAt     DateTime?
+  
+  @@index([walletId, createdAt])
+  @@index([status])
+  @@index([type])
+  @@index([externalRef])
+  @@map("transactions")
+}
+
+enum TxType {
+  DEPOSIT_ONRAMP    // MoMo → USDC
+  DEPOSIT_CRYPTO    // Crypto externe → Wallet
+  WITHDRAWAL_OFFRAMP // USDC → MoMo
+  WITHDRAWAL_CRYPTO  // Wallet → Adresse externe
+  TRANSFER_P2P       // Wallet → Wallet interne
+  REFUND
+  FEE
+}
+
+enum TxStatus {
+  PENDING           // Initiée
+  PROCESSING        // En cours (attente confirmation)
+  COMPLETED         // Terminée avec succès
+  FAILED            // Échec
+  CANCELLED         // Annulée par l'utilisateur
+  EXPIRED           // Expirée (timeout)
+}
+
+// ============================================
+// ON-RAMP DETAILS (MoMo, futurs providers)
+// ============================================
+
+model OnRampTransaction {
+  id              String    @id @default(cuid())
+  transactionId   String    @unique
+  transaction     Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  // Provider
+  provider        OnRampProvider
+  providerRef     String    @unique  // Référence MoMo, etc.
+  
+  // Montant fiat original
+  fiatCurrency    Currency
+  fiatAmount      Decimal   @db.Decimal(18, 2)
+  
+  // État provider
+  providerStatus  String
+  providerData    Json?
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([provider])
+  @@index([providerRef])
+  @@map("onramp_transactions")
+}
+
+enum OnRampProvider {
+  MTN_MOMO
+  MOOV_MONEY
+  CELTIIS
+  ORANGE_MONEY   // Futur
+  WAVE           // Futur
+  BANK_TRANSFER  // Futur
+}
+
+// ============================================
+// LEDGER (Double-Entry Accounting)
+// ============================================
+
+model LedgerEntry {
+  id            String    @id @default(cuid())
+  
+  // Transaction parente
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  
+  // Compte affecté
+  walletId      String?   // Null pour comptes système (escrow, fees)
+  wallet        Wallet?   @relation(fields: [walletId], references: [id])
+  accountType   AccountType
+  
+  // Montant (positif = crédit, négatif = débit)
+  amountUsdc    Decimal   @db.Decimal(18, 6)
+  entryType     EntryType
+  
+  // Balance après cette écriture (pour audit)
+  balanceAfter  Decimal   @db.Decimal(18, 6)
+  
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  
+  @@index([walletId, createdAt])
+  @@index([transactionId])
+  @@index([accountType])
+  @@map("ledger_entries")
+}
+
+enum AccountType {
+  USER          // Wallet utilisateur
+  ESCROW        // Compte de transit
+  FEES          // Compte de frais Pula Pay
+  LIQUIDITY     // Pool de liquidité pour conversion
+}
+
+enum EntryType {
+  DEBIT
+  CREDIT
+}
+
+// ============================================
+// WEBHOOKS & EVENTS
+// ============================================
+
+model WebhookEvent {
+  id            String    @id @default(cuid())
+  
+  // Source
+  provider      String    // "circle", "momo"
+  eventType     String
+  
+  // Payload
+  externalId    String    @unique
+  payload       Json
+  
+  // Processing
+  status        WebhookStatus @default(PENDING)
+  processedAt   DateTime?
+  error         String?
+  retryCount    Int       @default(0)
+  
+  // Timestamps
+  receivedAt    DateTime  @default(now())
+  
+  @@index([provider, eventType])
+  @@index([status])
+  @@map("webhook_events")
+}
+
+enum WebhookStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ============================================
+// EXCHANGE RATES (Cache)
+// ============================================
+
+model ExchangeRate {
+  id            String    @id @default(cuid())
+  
+  baseCurrency  String    // "USDC"
+  quoteCurrency Currency  // EUR, XOF
+  
+  rate          Decimal   @db.Decimal(18, 8)
+  source        String    // "coingecko", "manual"
+  
+  validFrom     DateTime  @default(now())
+  validUntil    DateTime
+  
+  @@unique([baseCurrency, quoteCurrency, validFrom])
+  @@index([quoteCurrency, validFrom])
+  @@map("exchange_rates")
+}
+
+// ============================================
+// SYSTEM ACCOUNTS (Pour ledger)
+// ============================================
+
+model SystemAccount {
+  id            String      @id @default(cuid())
+  accountType   AccountType @unique
+  name          String
+  description   String?
+  balanceUsdc   Decimal     @default(0) @db.Decimal(18, 6)
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  @@map("system_accounts")
+}

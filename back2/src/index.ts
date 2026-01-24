@@ -1,0 +1,132 @@
+import express from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
+import swaggerUi from 'swagger-ui-express';
+
+import { config } from './shared/config';
+import { logger } from './shared/utils/logger';
+import { prisma, connectDatabase, disconnectDatabase } from './infrastructure/persistence/prisma/client';
+import { createRouter } from './infrastructure/http/routes';
+import { requestLogger, errorHandler } from './infrastructure/http/middleware';
+import { swaggerSpec } from './infrastructure/http/swagger';
+
+async function bootstrap(): Promise<void> {
+  const app = express();
+
+  // Security middleware
+  app.use(helmet());
+  app.use(
+    cors({
+      origin: config.env === 'production' ? ['https://pulapay.com'] : '*',
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+    })
+  );
+
+  // Rate limiting
+  app.use(
+    rateLimit({
+      windowMs: config.rateLimit.windowMs,
+      max: config.rateLimit.maxRequests,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: {
+        success: false,
+        error: {
+          code: 'RATE_LIMITED',
+          message: 'Too many requests, please try again later',
+        },
+      },
+    })
+  );
+
+  // Body parsing
+  app.use(express.json({ limit: '10kb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+  // Compression
+  app.use(compression());
+
+  // Request logging
+  app.use(requestLogger);
+
+  // Connect to database
+  await connectDatabase();
+
+  // Swagger documentation
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Pula Pay API v2 Documentation',
+  }));
+  app.get('/api/docs.json', (_req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.send(swaggerSpec);
+  });
+
+  // API routes
+  app.use('/api/v2', createRouter(prisma));
+
+  // 404 handler
+  app.use((_req, res) => {
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Resource not found',
+      },
+    });
+  });
+
+  // Error handler
+  app.use(errorHandler);
+
+  // Start server
+  const server = app.listen(config.port, () => {
+    logger.info(
+      {
+        port: config.port,
+        env: config.env,
+      },
+      `Pula Pay v2 server started on port ${config.port}`
+    );
+  });
+
+  // Graceful shutdown
+  const shutdown = async (signal: string) => {
+    logger.info({ signal }, 'Received shutdown signal');
+
+    server.close(async () => {
+      logger.info('HTTP server closed');
+      await disconnectDatabase();
+      process.exit(0);
+    });
+
+    // Force shutdown after 30s
+    setTimeout(() => {
+      logger.error('Forced shutdown after timeout');
+      process.exit(1);
+    }, 30000);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
+
+// Handle unhandled rejections
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error({ reason, promise }, 'Unhandled Promise Rejection');
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  logger.fatal({ error }, 'Uncaught Exception');
+  process.exit(1);
+});
+
+// Start the application
+bootstrap().catch((error) => {
+  logger.fatal({ error }, 'Failed to start application');
+  process.exit(1);
+});

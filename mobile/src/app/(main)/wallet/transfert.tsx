@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, Alert, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TextInput, ActivityIndicator, StyleSheet, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import PhoneInput, { ICountry } from 'react-native-international-phone-number';
+import PhoneInput, { ICountry } from '@/src/components/ui/phone-input';
 import { router } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 
 import { useRecipientId } from '@/src/hooks/use-recipient-id';
 import { useAuthStore } from '@/src/store/authStore';
 import { useWalletStore } from '@/src/store/walletStore';
+import { useConversion } from '@/src/hooks/use-conversion';
 import { sanitizeCountryCode, sanitizePhoneNumber } from '@/src/utils/phone';
+import { getApiError } from '@/src/utils/api-error';
+import { toast } from '@/src/store/toastStore';
 import { useTheme } from '@/src/theme';
 import { useStyles } from '@/src/hooks/use-styles';
 import Screen from '@/src/components/screen';
 import Button from '@/src/components/ui/button';
+import ExchangeRateIndicator from '@/src/components/exchange-rate';
 import type { Theme } from '@/src/theme/types';
 
 export default function Transfer() {
@@ -28,21 +32,26 @@ export default function Transfer() {
     const [note, setNote] = useState('');
     const [submittedTx, setSubmittedTx] = useState<{
         amount: string;
+        amountUsdc: string;
         recipientPhone: string | null;
         txId: string | null;
     } | null>(null);
 
-    const { recipientId, error: recipientError, getPhoneUserId } = useRecipientId();
+    const { recipientId, errorKey: recipientErrorKey, getPhoneUserId } = useRecipientId();
     const { user } = useAuthStore();
-    const { transfer, loading, error, currency } = useWalletStore();
+    const { transfer, loading, error, displayCurrency, balanceUsdc, syncWalletStatus } = useWalletStore();
+    const { toUsdc, toDisplay, rate, loading: rateLoading, refresh: refreshRate } = useConversion(displayCurrency);
 
     const formatAmount = (value: string) => {
         return new Intl.NumberFormat(locale, {
             style: 'currency',
-            currency,
-            maximumFractionDigits: 2,
+            currency: displayCurrency,
+            maximumFractionDigits: displayCurrency === 'XOF' ? 0 : 2,
         }).format(Number(value || 0));
     };
+
+    const estimatedUsdc = amount ? toUsdc(amount) : '0';
+    const availableDisplay = balanceUsdc ? toDisplay(balanceUsdc) : '—';
 
     // Debounced phone lookup
     useEffect(() => {
@@ -63,24 +72,48 @@ export default function Transfer() {
 
     const handleSubmit = async () => {
         if (!recipientPhone || !amount || !recipientId || !user?.id) {
-            Alert.alert(t('errors.title'), t('transfer.fillAllFields'));
+            toast.error(t('transfer.fillAllFields'));
+            return;
+        }
+
+        // Check if user has enough balance
+        if (balanceUsdc && parseFloat(estimatedUsdc) > parseFloat(balanceUsdc)) {
+            toast.error(t('transfer.insufficientFunds'));
             return;
         }
 
         try {
+            // Check and sync wallet status before attempting transaction
+            toast.info(t('transfer.checkingWallet'), 3000);
+            const { wasUpdated, currentStatus } = await syncWalletStatus();
+
+            if (wasUpdated) {
+                toast.success(t('transfer.walletActivated'), 3000);
+            }
+
+            if (currentStatus !== 'ACTIVE') {
+                toast.error(t('transfer.walletNotActive'), 5000);
+                return;
+            }
+
             const txId = await transfer({
                 receiverId: recipientId,
+                receiverPhone: recipientPhone,
                 amount: String(amount),
-                currency: currency as any,
+                currency: displayCurrency,
+                description: note || undefined,
             });
             setSubmittedTx({
                 amount,
+                amountUsdc: estimatedUsdc,
                 recipientPhone,
                 txId,
             });
+            toast.success(t('transfer.success'));
         } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : t('errors.generic');
-            Alert.alert(t('errors.transferFailed'), errorMessage);
+            const { translationKey, message } = getApiError(err);
+            const errorMessage = message || t(translationKey);
+            toast.error(errorMessage, 6000);
         }
     };
 
@@ -95,6 +128,8 @@ export default function Transfer() {
                         <Text style={styles.value}>{submittedTx.recipientPhone}</Text>
                         <Text style={styles.label}>{t('transfer.amount')}:</Text>
                         <Text style={styles.value}>{formatAmount(submittedTx.amount)}</Text>
+                        <Text style={styles.label}>{t('transfer.amountUsdc')}:</Text>
+                        <Text style={styles.value}>~{parseFloat(submittedTx.amountUsdc).toFixed(2)} USDC</Text>
                         <Text style={styles.label}>{t('transfer.txId')}:</Text>
                         <Text style={styles.value}>{submittedTx.txId}</Text>
                     </View>
@@ -107,53 +142,79 @@ export default function Transfer() {
     return (
         <Screen>
             <ArrowLeft onPress={() => router.replace('/(main)/wallet')} color={theme.colors.text} />
-            <Text style={styles.title}>{t('transfer.title')}</Text>
-            <View style={styles.inputGroup}>
-                <Text style={styles.label}>{t('transfer.recipientPhone')}</Text>
-                <PhoneInput
-                    value={queryPhone}
-                    onChangePhoneNumber={setQueryPhone}
-                    defaultCountry="BJ"
-                    onChangeSelectedCountry={setCountryCode}
-                    ref={null}
-                    theme={theme.mode === 'dark' ? 'dark' : 'light'}
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                <Text style={styles.title}>{t('transfer.title')}</Text>
+
+                <View style={styles.balanceInfo}>
+                    <Text style={styles.balanceLabel}>{t('transfer.availableBalance')}</Text>
+                    <Text style={styles.balanceValue}>{availableDisplay}</Text>
+                    {balanceUsdc && (
+                        <Text style={styles.balanceUsdc}>({parseFloat(balanceUsdc).toFixed(2)} USDC)</Text>
+                    )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>{t('transfer.recipientPhone')}</Text>
+                    <PhoneInput
+                        value={queryPhone}
+                        onChangePhoneNumber={setQueryPhone}
+                        onChangeSelectedCountry={setCountryCode}
+                    />
+                    {recipientId && !recipientErrorKey && (
+                        <Text style={styles.successMessage}>{t('transfer.userFound')}: {queryPhone}</Text>
+                    )}
+                    {recipientErrorKey && queryPhone && (
+                        <Text style={styles.error}>{t(recipientErrorKey)}</Text>
+                    )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>{t('transfer.amount')} ({displayCurrency})</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder={t('transfer.amountPlaceholder')}
+                        value={amount}
+                        onChangeText={setAmount}
+                        keyboardType="numeric"
+                        placeholderTextColor={theme.colors.placeholder}
+                    />
+                    {amount && (
+                        <Text style={styles.usdcEquivalent}>
+                            {t('transfer.amountUsdc')}: ~{parseFloat(estimatedUsdc).toFixed(2)} USDC
+                        </Text>
+                    )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>{t('transfer.note')}</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder={t('transfer.notePlaceholder')}
+                        value={note}
+                        onChangeText={setNote}
+                        placeholderTextColor={theme.colors.placeholder}
+                    />
+                </View>
+
+                <View style={styles.inputGroup}>
+                    <ExchangeRateIndicator
+                        rate={rate}
+                        currency={displayCurrency}
+                        loading={rateLoading}
+                        onRefresh={refreshRate}
+                    />
+                </View>
+
+                <Button
+                    title={loading ? t('transfer.submitting') : t('transfer.submit')}
+                    onPress={handleSubmit}
+                    loading={loading}
+                    disabled={loading || !recipientPhone || !amount}
                 />
-                {recipientId && !recipientError && (
-                    <Text style={styles.successMessage}>{t('transfer.userFound')}: {queryPhone}</Text>
-                )}
-                {recipientError && queryPhone && (
-                    <Text style={styles.error}>{recipientError}</Text>
-                )}
-            </View>
-            <View style={styles.inputGroup}>
-                <Text style={styles.label}>{t('transfer.amount')} ({currency})</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder={t('transfer.amountPlaceholder')}
-                    value={amount}
-                    onChangeText={setAmount}
-                    keyboardType="numeric"
-                    placeholderTextColor={theme.colors.placeholder}
-                />
-            </View>
-            <View style={styles.inputGroup}>
-                <Text style={styles.label}>{t('transfer.note')}</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder={t('transfer.notePlaceholder')}
-                    value={note}
-                    onChangeText={setNote}
-                    placeholderTextColor={theme.colors.placeholder}
-                />
-            </View>
-            <Button
-                title={loading ? t('transfer.submitting') : t('transfer.submit')}
-                onPress={handleSubmit}
-                loading={loading}
-                disabled={loading || !recipientPhone || !amount}
-            />
-            {loading && <ActivityIndicator style={styles.loader} color={theme.colors.primary} />}
-            {error && <Text style={styles.error}>{error}</Text>}
+
+                {loading && <ActivityIndicator style={styles.loader} color={theme.colors.primary} />}
+                {error && <Text style={styles.error}>{error}</Text>}
+            </ScrollView>
         </Screen>
     );
 }
@@ -164,10 +225,35 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         padding: theme.spacing.m,
         backgroundColor: theme.colors.background,
     },
+    scrollContent: {
+        flexGrow: 1,
+        paddingBottom: theme.spacing.xl,
+    },
     title: {
         ...theme.typography.h1,
         color: theme.colors.text,
         marginBottom: theme.spacing.m,
+    },
+    balanceInfo: {
+        backgroundColor: theme.colors.surface,
+        padding: theme.spacing.m,
+        borderRadius: theme.borderRadius.m,
+        marginBottom: theme.spacing.m,
+        borderWidth: 1,
+        borderColor: theme.colors.outline,
+    },
+    balanceLabel: {
+        ...theme.typography.caption,
+        color: theme.colors.textMuted,
+    },
+    balanceValue: {
+        ...theme.typography.h2,
+        color: theme.colors.text,
+        fontWeight: 'bold',
+    },
+    balanceUsdc: {
+        ...theme.typography.caption,
+        color: theme.colors.textMuted,
     },
     inputGroup: {
         marginBottom: theme.spacing.m,
@@ -185,6 +271,11 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         backgroundColor: theme.colors.inputBackground,
         color: theme.colors.text,
         borderColor: theme.colors.outline,
+    },
+    usdcEquivalent: {
+        ...theme.typography.caption,
+        color: theme.colors.textMuted,
+        marginTop: theme.spacing.xs,
     },
     loader: {
         marginTop: theme.spacing.m,

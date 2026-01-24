@@ -2,24 +2,21 @@ import { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Link } from "expo-router";
 import { useTranslation } from "react-i18next";
-import PhoneNumberInput, { ICountry } from "react-native-international-phone-number";
-
 import Screen from "@/src/components/screen";
 import Input from "@/src/components/ui/Input";
 import Button from "@/src/components/ui/button";
+import PhoneInput, { ICountry } from "@/src/components/ui/phone-input";
 
 import { login } from "../../api/auth";
 import { useAuthStore } from "../../store/authStore";
 import { sanitizeCountryCode, sanitizePhoneNumber } from "../../utils/phone";
-import { getErrorMessage } from "../../utils/httpError";
+import { getApiError } from "../../utils/api-error";
 
-import { useTheme } from "@/src/theme";
 import { useStyles } from "@/src/hooks/use-styles";
 import type { Theme } from "@/src/theme/types";
 
 export default function Login() {
     const { t } = useTranslation();
-    const theme = useTheme();
     const styles = useStyles(getStyles);
     const useLoginContext = useAuthStore((s) => s.login);
 
@@ -35,19 +32,24 @@ export default function Login() {
             setError(null);
 
             if (!phone || !password) {
-                setError("Veuillez remplir tous les champs");
+                setError(t("validation.fillAllFields"));
                 return;
             }
             if (!contryCode?.idd?.root) {
-                setError(t("errors.invalidPhone"));
+                setError(t("validation.invalidPhone"));
                 return;
             }
 
             const formattedPhone = sanitizeCountryCode(contryCode.idd.root) + sanitizePhoneNumber(phone);
-            const { token } = await login(formattedPhone, password);
-            await useLoginContext(token);
+            const { accessToken, refreshToken } = await login(formattedPhone, password);
+            await useLoginContext(accessToken, refreshToken);
         } catch (e) {
-            setError(getErrorMessage(e) || t("login.failed"));
+            const { code, translationKey, message } = getApiError(e);
+            if (code === "VALIDATION_ERROR" && message) {
+                setError(message);
+            } else {
+                setError(t(translationKey));
+            }
         } finally {
             setLoading(false);
         }
@@ -61,16 +63,11 @@ export default function Login() {
 
                 <View style={styles.formGroup}>
                     <Text style={styles.label}>{t("login.phone")}</Text>
-                    <View >
-                        <PhoneNumberInput
-                            value={phone}
-                            onChangePhoneNumber={setPhone}
-                            defaultCountry="BJ"
-                            onChangeSelectedCountry={setCountryCode}
-                            ref={null}
-                            theme={theme.mode === "dark" ? "dark" : "light"}
-                        />
-                    </View>
+                    <PhoneInput
+                        value={phone}
+                        onChangePhoneNumber={setPhone}
+                        onChangeSelectedCountry={setCountryCode}
+                    />
                 </View>
 
                 <View style={styles.formGroup}>
