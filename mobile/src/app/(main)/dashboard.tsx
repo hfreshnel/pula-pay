@@ -9,14 +9,12 @@ import SafeComponent from "@/src/components/safe-component";
 import WalletSummary from "@/src/components/wallet-summary";
 import { useStyles } from "@/src/hooks/use-styles";
 import type { Theme } from "@/src/theme/types";
+import type { User } from "@/src/store/types";
 
 export default function Dashboard() {
     const { t } = useTranslation();
     const styles = useStyles(getStyles);
-    const user: any = useAuthStore((s) => s.user);
-    const logout = useAuthStore((s) => s.logout);
-
-    console.log(`Dashboard user: ${user?.id}`);
+    const user = useAuthStore((s) => s.user) as User | null;
     const greeting = user && (user.name || user.firstName)
         ? `Bonjour ${user.name || user.firstName} 👋`
         : "Bonjour 👋";

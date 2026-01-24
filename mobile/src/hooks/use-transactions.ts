@@ -1,19 +1,23 @@
 import { useCallback, useState } from "react";
-import { getTransactionsList } from "../api/transactions";
+import { getMyTransactions } from "../api/wallet";
+import type { TxDTO } from "../api/types";
+
+type ApiError = { response?: { data?: { error?: string } }; message?: string };
 
 export function useTransactions() {
-    const [transactions, setTransactions] = useState([]);
+    const [transactions, setTransactions] = useState<TxDTO[]>([]);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<string | null>(null);
 
-    const getTransactions = useCallback(async (userId: string) => {
+    const getTransactions = useCallback(async () => {
         setError(null);
         setLoading(true);
         try {
-            const { txs } = await getTransactionsList(userId);
+            const txs = await getMyTransactions();
             setTransactions(txs);
-        } catch (e: any) {
-            setError(e?.response?.data?.error || e.message || "Failed to get transactions");
+        } catch (e: unknown) {
+            const err = e as ApiError;
+            setError(err?.response?.data?.error || err.message || "Failed to get transactions");
         } finally {
             setLoading(false);
         }

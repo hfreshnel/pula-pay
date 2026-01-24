@@ -1,89 +1,98 @@
-import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "../theme";
 import { useStyles } from "../hooks/use-styles";
 import type { Theme } from "../theme/types";
 
-const quickActionsData = [
+type QuickAction = {
+  titleKey: string;
+  subtitleKey: string;
+  descriptionKey: string;
+  emoji: string;
+  route: string;
+};
+
+const quickActionsData: QuickAction[] = [
   {
-    title: "Recharge",
-    subtitle: "Crédit mobile",
-    description: "MTN, Moov, Celtiis",
-    emoji: "📱",
-    page: "Recharge",
+    titleKey: "quickActions.deposit.title",
+    subtitleKey: "quickActions.deposit.subtitle",
+    descriptionKey: "quickActions.deposit.description",
+    emoji: "💰",
+    route: "/wallet/deposit",
   },
   {
-    title: "Internet",
-    subtitle: "Pass data",
-    description: "Forfaits 3G/4G",
-    emoji: "📶",
-    page: "Internet",
+    titleKey: "quickActions.receive.title",
+    subtitleKey: "quickActions.receive.subtitle",
+    descriptionKey: "quickActions.receive.description",
+    emoji: "📥",
+    route: "/wallet/receive",
   },
   {
-    title: "Transfert",
-    subtitle: "Argent mobile",
-    description: "Mobile Money",
+    titleKey: "quickActions.transfer.title",
+    subtitleKey: "quickActions.transfer.subtitle",
+    descriptionKey: "quickActions.transfer.description",
     emoji: "💸",
-    page: "P2PTransfer",
+    route: "/wallet/transfert",
   },
   {
-    title: "Factures",
-    subtitle: "Services",
-    description: "SBEE, Canal+",
+    titleKey: "quickActions.withdraw.title",
+    subtitleKey: "quickActions.withdraw.subtitle",
+    descriptionKey: "quickActions.withdraw.description",
+    emoji: "🏧",
+    route: "/wallet/withdraw",
+  },
+  {
+    titleKey: "quickActions.recharge.title",
+    subtitleKey: "quickActions.recharge.subtitle",
+    descriptionKey: "quickActions.recharge.description",
+    emoji: "📱",
+    route: "#",
+  },
+  {
+    titleKey: "quickActions.bills.title",
+    subtitleKey: "quickActions.bills.subtitle",
+    descriptionKey: "quickActions.bills.description",
     emoji: "🧾",
-    page: "Bills",
-  },
-  {
-    title: "P2P",
-    subtitle: "PulaPay",
-    description: "Entre utilisateurs",
-    emoji: "🔁",
-    page: "P2PTransfer",
-  },
-  {
-    title: "Entreprises",
-    subtitle: "B2B",
-    description: "Paiements pros",
-    emoji: "🏢",
-    page: "Bills",
+    route: "#",
   },
 ];
 
 export default function QuickActions() {
+  const { t } = useTranslation();
   const router = useRouter();
   const theme = useTheme();
   const styles = useStyles(getStyles);
 
-  const goTo = (page: string) => {
-    // Simple mapping: use `/${page}` as path — adjust if your routes differ
-    const path = `/${page}`;
-    router.push("#");
+  const goTo = (route: string) => {
+    if (route !== "#") {
+      router.push(route as any);
+    }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Services</Text>
-        <TouchableOpacity onPress={() => router.push('#')}>
-          <Text style={styles.seeAll}>Voir tout</Text>
+        <Text style={styles.title}>{t("quickActions.title")}</Text>
+        <TouchableOpacity onPress={() => {}}>
+          <Text style={styles.seeAll}>{t("quickActions.seeAll")}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.grid}>
         {quickActionsData.map((action) => (
           <TouchableOpacity
-            key={action.title}
+            key={action.titleKey}
             style={styles.card}
-            onPress={() => goTo(action.page)}
+            onPress={() => goTo(action.route)}
             activeOpacity={0.8}
           >
             <View style={styles.iconWrap}>
               <Text style={styles.icon}>{action.emoji}</Text>
             </View>
-            <Text style={styles.cardTitle}>{action.title}</Text>
-            <Text style={styles.cardSubtitle}>{action.subtitle}</Text>
-            <Text style={styles.cardDesc}>{action.description}</Text>
+            <Text style={styles.cardTitle}>{t(action.titleKey)}</Text>
+            <Text style={styles.cardSubtitle}>{t(action.subtitleKey)}</Text>
+            <Text style={styles.cardDesc}>{t(action.descriptionKey)}</Text>
           </TouchableOpacity>
         ))}
       </View>

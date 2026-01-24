@@ -1,123 +1,257 @@
 {
-  "app": {
-    "name": "MoMo App"
-  },
-  "common": {
-    "phone": "Phone number",
-    "password": "Password",
-    "button": {
-      "submit": "Submit",
-      "cancel": "Cancel",
-      "confirm": "Back"
+    "app": {
+        "name": "PulaPay"
+    },
+    "common": {
+        "phone": "Phone number",
+        "password": "Password",
+        "comingSoon": "Coming soon",
+        "button": {
+            "submit": "Submit",
+            "cancel": "Cancel",
+            "confirm": "Back"
+        },
+        "errors": {
+            "network": "Network error. Please try again.",
+            "unknown": "An unknown error occurred. Please try again.",
+            "invalidPhone": "Invalid phone number."
+        }
+    },
+    "login": {
+        "title": "Login",
+        "phone": "Phone number",
+        "password": "Password",
+        "button": "Sign in",
+        "goToRegister": "Create an account"
+    },
+    "register": {
+        "title": "Create an account",
+        "phone": "Phone number",
+        "password": "Password",
+        "confirmPassword": "Confirm password",
+        "button": "Sign up",
+        "goToLogin": "Already have an account? Sign in",
+        "verifyPhone": "Verify your phone",
+        "otpSent": "Enter the code sent to your phone",
+        "otpSending": "Sending code...",
+        "otpSentSuccess": "Code sent! Expires in {{expiresIn}}",
+        "verifyButton": "Verify code",
+        "resendOtp": "Resend code"
+    },
+    "home": {
+        "welcome": "Welcome, {{phone}}",
+        "balance": "Balance"
+    },
+    "transactions": {
+        "title": "Transaction history",
+        "recentTitle": "Recent activity",
+        "seeAll": "See all",
+        "emptyTitle": "No transactions",
+        "emptySubtitle": "Your recent transactions will appear here",
+        "firstTransaction": "Make first transaction",
+        "searchPlaceholder": "Search by reference...",
+        "empty": "No transactions found",
+        "refresh": "Refresh",
+        "refreshing": "Refreshing...",
+        "type": {
+            "DEPOSIT_ONRAMP": "Mobile Money Deposit",
+            "DEPOSIT_CRYPTO": "Crypto Deposit",
+            "WITHDRAWAL_OFFRAMP": "Mobile Money Withdrawal",
+            "WITHDRAWAL_CRYPTO": "Crypto Withdrawal",
+            "TRANSFER_P2P": "P2P Transfer",
+            "REFUND": "Refund",
+            "FEE": "Fee"
+        },
+        "status": {
+            "COMPLETED": "Success",
+            "FAILED": "Failed",
+            "CANCELLED": "Cancelled",
+            "PENDING": "Pending",
+            "PROCESSING": "Processing",
+            "EXPIRED": "Expired"
+        }
+    },
+    "wallet": {
+        "availableBalance": "Available balance",
+        "balanceUsdc": "USDC Balance",
+        "displayBalance": "Equivalent",
+        "address": "Wallet address",
+        "copyAddress": "Copy address",
+        "addressCopied": "Address copied!",
+        "blockchain": "Network",
+        "deposit": "Deposit",
+        "send": "Send",
+        "receive": "Receive",
+        "withdraw": "Withdraw",
+        "viewDetails": "View details",
+        "trendThisMonth": "+{{percent}}% this month",
+        "notFound": "Wallet not found",
+        "createWallet": "Create wallet",
+        "createWalletPrompt": "Create your wallet to start using PulaPay"
+    },
+    "exchange": {
+        "rate": "Exchange rate",
+        "lastUpdate": "Last updated",
+        "refreshing": "Refreshing..."
+    },
+    "deposit": {
+        "title": "Top up wallet",
+        "success": "Deposit successful",
+        "selectMethod": "Select a method",
+        "mtn_momo": "MTN Mobile Money",
+        "orange_money": "Orange Money",
+        "crypto": "Receive Crypto",
+        "method": "Method",
+        "phone": "Phone number",
+        "amount": "Amount",
+        "amountPlaceholder": "e.g. 100.00",
+        "equivalentUsdc": "USDC equivalent",
+        "exchangeRateUsed": "Rate applied",
+        "submit": "Deposit",
+        "submitting": "Sending...",
+        "viewTransactions": "View transactions",
+        "txId": "Reference",
+        "methodNotSupported": "Method not yet supported",
+        "checkingWallet": "Checking wallet status...",
+        "walletActivated": "Wallet activated successfully!",
+        "walletNotActive": "Wallet is not active. Please try again in a few moments."
+    },
+    "withdraw": {
+        "title": "Withdrawal request",
+        "success": "Withdrawal successful",
+        "availableBalance": "Available balance",
+        "method": "Payment method",
+        "phone": "Phone number",
+        "amount": "Amount to withdraw",
+        "amountUsdc": "USDC equivalent",
+        "amountPlaceholder": "e.g. 100.00",
+        "submit": "Withdraw",
+        "submitting": "Sending...",
+        "viewTransactions": "View transactions",
+        "txId": "Reference",
+        "methodNotSupported": "Method not yet supported",
+        "insufficientFunds": "Insufficient funds",
+        "checkingWallet": "Checking wallet status...",
+        "walletActivated": "Wallet activated successfully!",
+        "walletNotActive": "Wallet is not active. Please try again in a few moments."
+    },
+    "transfer": {
+        "title": "Send to PulaPay user",
+        "success": "Transfer successful",
+        "availableBalance": "Available balance",
+        "recipient": "Recipient",
+        "recipientPhone": "Recipient phone number",
+        "amount": "Amount",
+        "amountUsdc": "USDC equivalent",
+        "amountPlaceholder": "e.g. 2000",
+        "note": "Message (optional)",
+        "notePlaceholder": "e.g. Gift, contribution...",
+        "submit": "Send money",
+        "submitting": "Sending...",
+        "viewTransactions": "View transactions",
+        "txId": "Reference",
+        "userFound": "User found",
+        "fillAllFields": "Please fill in all required fields.",
+        "insufficientFunds": "Insufficient funds",
+        "checkingWallet": "Checking wallet status...",
+        "walletActivated": "Wallet activated successfully!",
+        "walletNotActive": "Wallet is not active. Please try again in a few moments."
+    },
+    "receive": {
+        "title": "Receive",
+        "scanQr": "Scan this QR code",
+        "yourAddress": "Your address",
+        "network": "Network",
+        "warning": "Only send USDC on the {{network}} network",
+        "testnetWarning": "TESTNET - Do not send real funds",
+        "share": "Share address",
+        "shareTitle": "My PulaPay address",
+        "shareMessage": "Send USDC to my PulaPay address",
+        "shareMessageWithAmount": "Send {{amount}} USDC to my PulaPay address",
+        "onlyUsdc": "Only USDC is accepted",
+        "usdcInfo": "Your wallet only accepts USDC tokens. Make sure to send on the correct network to avoid loss of funds.",
+        "noAddress": "Address not available"
+    },
+    "profile": {
+        "displayCurrency": "Display currency",
+        "selectCurrency": "Select currency",
+        "walletInfo": "Wallet information",
+        "kycLevel": "Verification level"
+    },
+    "currencies": {
+        "EUR": "Euro (EUR)",
+        "XOF": "CFA Franc (XOF)"
+    },
+    "quickActions": {
+        "title": "Services",
+        "seeAll": "See all",
+        "deposit": {
+            "title": "Deposit",
+            "subtitle": "Mobile Money",
+            "description": "MTN, Orange"
+        },
+        "receive": {
+            "title": "Receive",
+            "subtitle": "Crypto USDC",
+            "description": "Via QR code"
+        },
+        "transfer": {
+            "title": "Send",
+            "subtitle": "P2P",
+            "description": "Between users"
+        },
+        "withdraw": {
+            "title": "Withdraw",
+            "subtitle": "Mobile Money",
+            "description": "To MoMo"
+        },
+        "recharge": {
+            "title": "Recharge",
+            "subtitle": "Mobile credit",
+            "description": "MTN, Moov"
+        },
+        "bills": {
+            "title": "Bills",
+            "subtitle": "Services",
+            "description": "SBEE, Canal+"
+        }
     },
     "errors": {
-      "network": "Network error. Please try again.",
-      "unknown": "An unknown error occurred. Please try again.",
-      "invalidPhone": "Invalid phone number."
-    }
-  },
-  "login": {
-    "title": "Login",
-    "phone": "Phone number",
-    "password": "Password",
-    "button": "Sign in",
-    "goToRegister": "Create an account"
-  },
-  "register": {
-    "title": "Create an account",
-    "phone": "Phone number",
-    "password": "Password",
-    "confirmPassword": "Confirm password",
-    "button": "Sign up",
-    "goToLogin": "Already have an account? Sign in",
-    "verifyButton": "Verify code"
-  },
-  "home": {
-    "welcome": "Welcome, {{phone}}",
-    "balance": "Balance"
-  },
-  "transactions": {
-    "title": "Transaction history",
-    "recentTitle": "Recent activity",
-    "seeAll": "See all",
-    "emptyTitle": "No transactions",
-    "emptySubtitle": "Your recent transactions will appear here",
-    "firstTransaction": "Make first transaction",
-    "searchPlaceholder": "Search by reference...",
-    "empty": "No transactions found",
-    "refresh": "Refresh",
-    "refreshing": "Refreshing...",
-    "kind": {
-      "DEPOSIT": "Deposit",
-      "WITHDRAWAL": "Withdrawal",
-      "TRANSFER": "Transfer",
-      "REFUND": "Refund",
-      "FEE": "Fee",
-      "ADJUSTMENT": "Adjustment"
+        "unauthenticated": "User not authenticated",
+        "generic": "An error occurred",
+        "title": "Error",
+        "depositFailed": "Deposit failed",
+        "withdrawFailed": "Withdrawal failed",
+        "transferFailed": "Transfer failed"
     },
-    "status": {
-      "SUCCESS": "Success",
-      "FAILED": "Failed",
-      "CANCELLED": "Cancelled",
-      "PENDING": "Pending"
+    "validation": {
+        "fillAllFields": "Please fill in all fields.",
+        "invalidPhone": "Invalid phone number.",
+        "passwordMismatch": "Passwords do not match.",
+        "invalidOtp": "Please enter a 6-digit code."
+    },
+    "apiErrors": {
+        "VALIDATION_ERROR": "The information entered is invalid. Please check and try again.",
+        "USER_EXISTS": "This phone number is already registered.",
+        "PHONE_EXISTS": "This phone number is already registered.",
+        "EMAIL_EXISTS": "This email is already registered.",
+        "ALREADY_VERIFIED": "Your account is already verified.",
+        "SELF_TRANSFER": "You cannot transfer to yourself.",
+        "UNAUTHORIZED": "Your session has expired. Please sign in again.",
+        "INVALID_CREDENTIALS": "Incorrect phone number or password.",
+        "VERIFICATION_FAILED": "The verification code is incorrect.",
+        "OTP_EXPIRED": "The verification code has expired. Please request a new one.",
+        "INVALID_OTP": "The verification code is incorrect.",
+        "FORBIDDEN": "You do not have permission to perform this action.",
+        "NOT_FOUND": "The requested resource was not found.",
+        "USER_NOT_FOUND": "This user does not exist.",
+        "WALLET_NOT_FOUND": "Wallet not found. Please create your wallet first.",
+        "WALLET_PENDING": "Your wallet is being created. Please wait a moment and try again.",
+        "WALLET_FROZEN": "Your wallet is temporarily frozen. Please contact support.",
+        "CONFLICT": "A conflict occurred. Please try again.",
+        "INSUFFICIENT_FUNDS": "Insufficient balance for this operation.",
+        "INTERNAL_ERROR": "A server error occurred. Please try again later.",
+        "NETWORK_ERROR": "Unable to connect to the server. Check your internet connection.",
+        "UNKNOWN_ERROR": "An unexpected error occurred. Please try again."
     }
-  },
-  "wallet": {
-    "availableBalance": "Available balance",
-    "deposit": "Deposit",
-    "send": "Send",
-    "withdraw": "Withdraw",
-    "viewDetails": "View details",
-    "trendThisMonth": "+{{percent}}% this month"
-  },
-  "deposit": {
-    "title": "Top up wallet",
-    "success": "Deposit successful",
-    "method": "Method",
-    "phone": "Phone number",
-    "amount": "Amount",
-    "amountPlaceholder": "e.g. 100.00",
-    "submit": "Deposit",
-    "submitting": "Sending...",
-    "viewTransactions": "View transactions",
-    "txId": "Reference",
-    "methodNotSupported": "Method not yet supported"
-  },
-  "withdraw": {
-    "title": "Withdrawal request",
-    "success": "Withdrawal successful",
-    "method": "Payment method",
-    "phone": "Phone number",
-    "amount": "Amount to withdraw",
-    "amountPlaceholder": "e.g. 100.00",
-    "submit": "Withdraw",
-    "submitting": "Sending...",
-    "viewTransactions": "View transactions",
-    "txId": "Reference",
-    "methodNotSupported": "Method not yet supported"
-  },
-  "transfer": {
-    "title": "Send to PulaPay user",
-    "success": "Transfer successful",
-    "recipient": "Recipient",
-    "recipientPhone": "Recipient phone number",
-    "amount": "Amount",
-    "amountPlaceholder": "e.g. 2000",
-    "note": "Message (optional)",
-    "notePlaceholder": "e.g. Gift, contribution...",
-    "submit": "Send money",
-    "submitting": "Sending...",
-    "viewTransactions": "View transactions",
-    "txId": "Reference",
-    "userFound": "User found",
-    "fillAllFields": "Please fill in all required fields."
-  },
-  "errors": {
-    "unauthenticated": "User not authenticated",
-    "generic": "An error occurred",
-    "title": "Error",
-    "depositFailed": "Deposit failed",
-    "withdrawFailed": "Withdrawal failed",
-    "transferFailed": "Transfer failed"
-  }
 }

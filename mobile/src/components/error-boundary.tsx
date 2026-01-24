@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { logger } from "../utils/logger";
 
 type State = {
     hasError: boolean;
@@ -24,11 +25,13 @@ export default class ErrorBoundary extends React.Component<any, State> {
     }
 
     componentDidCatch(error: any, errorInfo: any) {
-        // Save error details to state and log to console
+        // Save error details to state and log
         this.setState({ errorInfo });
-        // eslint-disable-next-line no-console
-        console.error("Unhandled error caught by ErrorBoundary:", error, errorInfo);
-        // TODO: send to remote logging service (Sentry, LogRocket, etc.)
+        logger.error('APP', 'Unhandled error caught by ErrorBoundary', {
+            error: error?.message ?? String(error),
+            stack: error?.stack,
+            componentStack: errorInfo?.componentStack,
+        });
     }
 
     handleRetry = () => {

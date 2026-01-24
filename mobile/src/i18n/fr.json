@@ -1,10 +1,11 @@
 {
     "app": {
-        "name": "MoMo App"
+        "name": "PulaPay"
     },
     "common": {
         "phone": "Numéro de téléphone",
         "password": "Mot de passe",
+        "comingSoon": "Bientôt",
         "button": {
             "submit": "Soumettre",
             "cancel": "Annuler",
@@ -30,7 +31,12 @@
         "confirmPassword": "Confirmer le mot de passe",
         "button": "S'inscrire",
         "goToLogin": "Déjà un compte ? Se connecter",
-        "verifyButton": "Vérifier le code"
+        "verifyPhone": "Vérifiez votre téléphone",
+        "otpSent": "Entrez le code envoyé à votre téléphone",
+        "otpSending": "Envoi du code...",
+        "otpSentSuccess": "Code envoyé ! Expire dans {{expiresIn}}",
+        "verifyButton": "Vérifier le code",
+        "resendOtp": "Renvoyer le code"
     },
     "home": {
         "welcome": "Bienvenue, {{phone}}",
@@ -47,61 +53,96 @@
         "empty": "Aucune transaction trouvée",
         "refresh": "Rafraîchir",
         "refreshing": "Rafraîchissement...",
-        "kind": {
-            "DEPOSIT": "Dépôt",
-            "WITHDRAWAL": "Retrait",
-            "TRANSFER": "Transfert",
+        "type": {
+            "DEPOSIT_ONRAMP": "Dépôt Mobile Money",
+            "DEPOSIT_CRYPTO": "Dépôt Crypto",
+            "WITHDRAWAL_OFFRAMP": "Retrait Mobile Money",
+            "WITHDRAWAL_CRYPTO": "Retrait Crypto",
+            "TRANSFER_P2P": "Transfert P2P",
             "REFUND": "Remboursement",
-            "FEE": "Frais",
-            "ADJUSTMENT": "Ajustement"
+            "FEE": "Frais"
         },
         "status": {
-            "SUCCESS": "Réussi",
+            "COMPLETED": "Réussi",
             "FAILED": "Échoué",
             "CANCELLED": "Annulé",
-            "PENDING": "En cours"
+            "PENDING": "En attente",
+            "PROCESSING": "En cours",
+            "EXPIRED": "Expiré"
         }
     },
     "wallet": {
         "availableBalance": "Solde disponible",
+        "balanceUsdc": "Solde USDC",
+        "displayBalance": "Équivalent",
+        "address": "Adresse wallet",
+        "copyAddress": "Copier l'adresse",
+        "addressCopied": "Adresse copiée !",
+        "blockchain": "Réseau",
         "deposit": "Recharger",
         "send": "Envoyer",
+        "receive": "Recevoir",
         "withdraw": "Retirer",
         "viewDetails": "Voir les détails",
-        "trendThisMonth": "+{{percent}}% ce mois"
+        "trendThisMonth": "+{{percent}}% ce mois",
+        "notFound": "Portefeuille non trouvé",
+        "createWallet": "Créer le portefeuille",
+        "createWalletPrompt": "Créez votre portefeuille pour commencer à utiliser PulaPay"
+    },
+    "exchange": {
+        "rate": "Taux de change",
+        "lastUpdate": "Mis à jour",
+        "refreshing": "Actualisation..."
     },
     "deposit": {
         "title": "Recharger le portefeuille",
         "success": "Recharge effectuée",
+        "selectMethod": "Choisir une méthode",
+        "mtn_momo": "MTN Mobile Money",
+        "orange_money": "Orange Money",
+        "crypto": "Recevoir Crypto",
         "method": "Méthode",
         "phone": "Numéro associé",
         "amount": "Montant",
         "amountPlaceholder": "Ex: 100.00",
+        "equivalentUsdc": "Équivalent USDC",
+        "exchangeRateUsed": "Taux appliqué",
         "submit": "Recharger",
         "submitting": "Envoi...",
         "viewTransactions": "Voir transactions",
         "txId": "Référence",
-        "methodNotSupported": "Méthode non encore supportée"
+        "methodNotSupported": "Méthode non encore supportée",
+        "checkingWallet": "Vérification du portefeuille...",
+        "walletActivated": "Portefeuille activé avec succès !",
+        "walletNotActive": "Le portefeuille n'est pas actif. Veuillez réessayer dans quelques instants."
     },
     "withdraw": {
         "title": "Demande de retrait",
         "success": "Retrait effectué",
+        "availableBalance": "Solde disponible",
         "method": "Moyen de paiement",
         "phone": "Numéro associé",
         "amount": "Montant à retirer",
+        "amountUsdc": "Équivalent USDC",
         "amountPlaceholder": "Ex: 100.00",
         "submit": "Retirer",
         "submitting": "Envoi...",
         "viewTransactions": "Voir transactions",
         "txId": "Référence",
-        "methodNotSupported": "Méthode non encore supportée"
+        "methodNotSupported": "Méthode non encore supportée",
+        "insufficientFunds": "Solde insuffisant",
+        "checkingWallet": "Vérification du portefeuille...",
+        "walletActivated": "Portefeuille activé avec succès !",
+        "walletNotActive": "Le portefeuille n'est pas actif. Veuillez réessayer dans quelques instants."
     },
     "transfer": {
         "title": "Transfert PulaPay → PulaPay",
         "success": "Transfert P2P effectué",
+        "availableBalance": "Solde disponible",
         "recipient": "Bénéficiaire",
         "recipientPhone": "Numéro du bénéficiaire",
         "amount": "Montant",
+        "amountUsdc": "Équivalent USDC",
         "amountPlaceholder": "Ex: 2000",
         "note": "Message (optionnel)",
         "notePlaceholder": "Ex: Participation, cadeau...",
@@ -110,7 +151,70 @@
         "viewTransactions": "Voir transactions",
         "txId": "Référence",
         "userFound": "Utilisateur trouvé",
-        "fillAllFields": "Veuillez remplir tous les champs requis."
+        "fillAllFields": "Veuillez remplir tous les champs requis.",
+        "insufficientFunds": "Solde insuffisant",
+        "checkingWallet": "Vérification du portefeuille...",
+        "walletActivated": "Portefeuille activé avec succès !",
+        "walletNotActive": "Le portefeuille n'est pas actif. Veuillez réessayer dans quelques instants."
+    },
+    "receive": {
+        "title": "Recevoir",
+        "scanQr": "Scannez ce QR code",
+        "yourAddress": "Votre adresse",
+        "network": "Réseau",
+        "warning": "Envoyez uniquement des USDC sur le réseau {{network}}",
+        "testnetWarning": "TESTNET - Ne pas envoyer de vrais fonds",
+        "share": "Partager l'adresse",
+        "shareTitle": "Mon adresse PulaPay",
+        "shareMessage": "Envoyez des USDC à mon adresse PulaPay",
+        "shareMessageWithAmount": "Envoyez {{amount}} USDC à mon adresse PulaPay",
+        "onlyUsdc": "Seul l'USDC est accepté",
+        "usdcInfo": "Votre portefeuille accepte uniquement les tokens USDC. Assurez-vous d'envoyer sur le bon réseau pour éviter toute perte de fonds.",
+        "noAddress": "Adresse non disponible"
+    },
+    "profile": {
+        "displayCurrency": "Devise d'affichage",
+        "selectCurrency": "Choisir la devise",
+        "walletInfo": "Informations wallet",
+        "kycLevel": "Niveau de vérification"
+    },
+    "currencies": {
+        "EUR": "Euro (EUR)",
+        "XOF": "Franc CFA (XOF)"
+    },
+    "quickActions": {
+        "title": "Services",
+        "seeAll": "Voir tout",
+        "deposit": {
+            "title": "Recharger",
+            "subtitle": "Mobile Money",
+            "description": "MTN, Orange"
+        },
+        "receive": {
+            "title": "Recevoir",
+            "subtitle": "Crypto USDC",
+            "description": "Via QR code"
+        },
+        "transfer": {
+            "title": "Envoyer",
+            "subtitle": "P2P",
+            "description": "Entre utilisateurs"
+        },
+        "withdraw": {
+            "title": "Retirer",
+            "subtitle": "Mobile Money",
+            "description": "Vers MoMo"
+        },
+        "recharge": {
+            "title": "Recharge",
+            "subtitle": "Crédit mobile",
+            "description": "MTN, Moov"
+        },
+        "bills": {
+            "title": "Factures",
+            "subtitle": "Services",
+            "description": "SBEE, Canal+"
+        }
     },
     "errors": {
         "unauthenticated": "Utilisateur non authentifié",
@@ -119,5 +223,35 @@
         "depositFailed": "Erreur lors du dépôt",
         "withdrawFailed": "Erreur lors du retrait",
         "transferFailed": "Erreur lors du transfert"
+    },
+    "validation": {
+        "fillAllFields": "Veuillez remplir tous les champs.",
+        "invalidPhone": "Numéro de téléphone invalide.",
+        "passwordMismatch": "Les mots de passe ne correspondent pas.",
+        "invalidOtp": "Veuillez entrer un code à 6 chiffres."
+    },
+    "apiErrors": {
+        "VALIDATION_ERROR": "Les données saisies sont invalides. Veuillez vérifier et réessayer.",
+        "USER_EXISTS": "Ce numéro de téléphone est déjà enregistré.",
+        "PHONE_EXISTS": "Ce numéro de téléphone est déjà enregistré.",
+        "EMAIL_EXISTS": "Cet email est déjà enregistré.",
+        "ALREADY_VERIFIED": "Votre compte est déjà vérifié.",
+        "SELF_TRANSFER": "Vous ne pouvez pas effectuer un transfert vers vous-même.",
+        "UNAUTHORIZED": "Votre session a expiré. Veuillez vous reconnecter.",
+        "INVALID_CREDENTIALS": "Numéro de téléphone ou mot de passe incorrect.",
+        "VERIFICATION_FAILED": "Le code de vérification est incorrect.",
+        "OTP_EXPIRED": "Le code de vérification a expiré. Veuillez en demander un nouveau.",
+        "INVALID_OTP": "Le code de vérification est incorrect.",
+        "FORBIDDEN": "Vous n'avez pas les droits pour effectuer cette action.",
+        "NOT_FOUND": "La ressource demandée n'a pas été trouvée.",
+        "USER_NOT_FOUND": "Cet utilisateur n'existe pas.",
+        "WALLET_NOT_FOUND": "Portefeuille non trouvé. Veuillez d'abord créer votre portefeuille.",
+        "WALLET_PENDING": "Votre portefeuille est en cours de création. Veuillez patienter un instant et réessayer.",
+        "WALLET_FROZEN": "Votre portefeuille est temporairement gelé. Veuillez contacter le support.",
+        "CONFLICT": "Un conflit est survenu. Veuillez réessayer.",
+        "INSUFFICIENT_FUNDS": "Solde insuffisant pour effectuer cette opération.",
+        "INTERNAL_ERROR": "Une erreur serveur est survenue. Veuillez réessayer plus tard.",
+        "NETWORK_ERROR": "Impossible de se connecter au serveur. Vérifiez votre connexion internet.",
+        "UNKNOWN_ERROR": "Une erreur inattendue est survenue. Veuillez réessayer."
     }
 }

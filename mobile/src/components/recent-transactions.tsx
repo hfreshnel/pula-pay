@@ -1,70 +1,30 @@
-import { useMemo } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
-import { useRouter } from "expo-router";
-import { ArrowDownRight, ArrowUpRight, ArrowLeftRight, RotateCcw, RefreshCw } from "lucide-react-native";
-import { useTranslation } from "react-i18next";
+import { useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { ArrowUpRight } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
-import { useWalletStore } from "../store/walletStore";
-import { useTheme } from "../theme";
-import { useStyles } from "../hooks/use-styles";
-import type { Theme } from "../theme/types";
-import type { TxDTO, EntryKind } from "../api/types";
+import { useWalletStore } from '../store/walletStore';
+import { useTheme } from '../theme';
+import { useStyles } from '../hooks/use-styles';
+import type { Theme } from '../theme/types';
+import { sortByDateDesc } from '../utils/transactions';
+import TransactionItem from './transaction-item';
 
-const KIND_ICONS: Record<EntryKind, typeof ArrowUpRight> = {
-    DEPOSIT: ArrowDownRight,
-    WITHDRAWAL: ArrowUpRight,
-    TRANSFER: ArrowLeftRight,
-    REFUND: RotateCcw,
-    FEE: ArrowUpRight,
-    ADJUSTMENT: RefreshCw,
-};
+const MAX_RECENT_TRANSACTIONS = 3;
 
 export default function RecentTransactions() {
     const router = useRouter();
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const theme = useTheme();
     const styles = useStyles(getStyles);
-    const { transactions, currency } = useWalletStore();
-    const locale = i18n.language === 'en' ? 'en-GB' : 'fr-FR';
+    const { transactions } = useWalletStore();
 
-    const sortedTransactions = useMemo(() => {
-        return [...transactions].sort((a, b) => {
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        });
+    const recentTransactions = useMemo(() => {
+        return sortByDateDesc(transactions).slice(0, MAX_RECENT_TRANSACTIONS);
     }, [transactions]);
 
-    const formatAmount = (amount: string) => {
-        return new Intl.NumberFormat(locale, {
-            style: 'currency',
-            currency,
-            maximumFractionDigits: 2,
-        }).format(Number(amount || 0));
-    };
-
-    const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleString(locale, {
-            day: '2-digit',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-    };
-
-    const getStatusStyle = (status: string) => {
-        switch (status) {
-            case 'SUCCESS':
-                return { backgroundColor: theme.colors.successLight, color: theme.colors.success };
-            case 'PENDING':
-                return { backgroundColor: theme.colors.warningLight, color: theme.colors.warning };
-            case 'FAILED':
-            case 'CANCELLED':
-                return { backgroundColor: theme.colors.dangerLight, color: theme.colors.danger };
-            default:
-                return { backgroundColor: theme.colors.surfaceVariant, color: theme.colors.textMuted };
-        }
-    };
-
-    if (!sortedTransactions.length) {
+    if (!recentTransactions.length) {
         return (
             <View style={styles.card}>
                 <View style={styles.headerRow}>
@@ -97,39 +57,11 @@ export default function RecentTransactions() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.list} nestedScrollEnabled={false}>
-                {sortedTransactions.slice(0, 3).map((tx: TxDTO) => {
-                    const Icon = KIND_ICONS[tx.kind] || ArrowLeftRight;
-                    const statusStyle = getStatusStyle(tx.status);
-                    const isCredit = tx.kind === 'DEPOSIT' || tx.kind === 'REFUND';
-
-                    return (
-                        <View key={tx.id} style={styles.itemRow}>
-                            <View style={[styles.iconWrap, { backgroundColor: theme.colors.primaryLight }]}>
-                                <Icon color={theme.colors.primary} size={20} />
-                            </View>
-
-                            <View style={styles.centerCol}>
-                                <Text style={styles.itemTitle}>{t(`transactions.kind.${tx.kind}`)}</Text>
-                                <View style={styles.rowMeta}>
-                                    <Text style={styles.dateText}>{formatDate(tx.createdAt)}</Text>
-                                </View>
-                            </View>
-
-                            <View style={styles.rightCol}>
-                                <Text style={[styles.amountText, isCredit ? styles.amountCredit : styles.amountDebit]}>
-                                    {isCredit ? '+' : '-'}{formatAmount(tx.amount)}
-                                </Text>
-                                <View style={[styles.statusBadge, { backgroundColor: statusStyle.backgroundColor }]}>
-                                    <Text style={[styles.statusText, { color: statusStyle.color }]}>
-                                        {t(`transactions.status.${tx.status}`)}
-                                    </Text>
-                                </View>
-                            </View>
-                        </View>
-                    );
-                })}
-            </ScrollView>
+            <View style={styles.list}>
+                {recentTransactions.map((tx) => (
+                    <TransactionItem key={tx.id} transaction={tx} showYear={false} />
+                ))}
+            </View>
         </View>
     );
 }
@@ -198,63 +130,5 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     list: {
         paddingHorizontal: theme.spacing.xs,
-    },
-    itemRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: theme.spacing.s,
-        paddingHorizontal: theme.spacing.s,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.outline,
-    },
-    iconWrap: {
-        width: 48,
-        height: 48,
-        borderRadius: theme.borderRadius.l,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: theme.spacing.s,
-    },
-    centerCol: {
-        flex: 1,
-    },
-    itemTitle: {
-        ...theme.typography.body,
-        fontWeight: '700',
-        color: theme.colors.text,
-    },
-    rowMeta: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing.xs,
-        marginTop: theme.spacing.xs,
-    },
-    dateText: {
-        ...theme.typography.caption,
-        color: theme.colors.textMuted,
-    },
-    rightCol: {
-        alignItems: 'flex-end',
-        minWidth: 120,
-    },
-    amountText: {
-        ...theme.typography.body,
-        fontWeight: '700',
-    },
-    amountCredit: {
-        color: theme.colors.success,
-    },
-    amountDebit: {
-        color: theme.colors.text,
-    },
-    statusBadge: {
-        marginTop: theme.spacing.xs,
-        paddingHorizontal: theme.spacing.xs,
-        paddingVertical: theme.spacing.xs,
-        borderRadius: theme.borderRadius.m,
-    },
-    statusText: {
-        ...theme.typography.caption,
-        fontWeight: '600',
     },
 });

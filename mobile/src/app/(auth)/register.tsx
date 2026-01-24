@@ -2,22 +2,19 @@ import { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
-import PhoneNumberInput, { ICountry, isValidPhoneNumber } from "react-native-international-phone-number";
-
 import Screen from "@/src/components/screen";
 import Input from "@/src/components/ui/Input";
 import Button from "@/src/components/ui/button";
+import PhoneInput, { ICountry } from "@/src/components/ui/phone-input";
 import { register } from "../../api/auth";
 import { sanitizeCountryCode, sanitizePhoneNumber } from "../../utils/phone";
-import { getErrorMessage } from "../../utils/httpError";
-import { useTheme } from "@/src/theme";
+import { getApiError } from "../../utils/api-error";
 import { useStyles } from "@/src/hooks/use-styles";
 import type { Theme } from "@/src/theme/types";
 
 export default function Register() {
     const { t } = useTranslation();
     const router = useRouter();
-    const theme = useTheme();
     const styles = useStyles(getStyles);
 
     const [phone, setPhone] = useState("");
@@ -33,23 +30,28 @@ export default function Register() {
             setError(null);
 
             if (!phone || !password || !confirmPassword) {
-                setError("Veuillez remplir tous les champs");
+                setError(t("validation.fillAllFields"));
                 return;
             }
             if (password !== confirmPassword) {
-                setError("Les mots de passe ne correspondent pas.");
+                setError(t("validation.passwordMismatch"));
                 return;
             }
             if (!contryCode?.idd?.root) {
-                setError(t("register.invalidPhone"));
+                setError(t("validation.invalidPhone"));
                 return;
             }
-            
+
             const formattedPhone = sanitizeCountryCode(contryCode.idd.root) + sanitizePhoneNumber(phone);
             await register(formattedPhone, password);
             router.push({ pathname: "/(auth)/verify-otp", params: { phone: formattedPhone } });
         } catch (e) {
-            setError(getErrorMessage(e) || t("common.errors.registerFailed"));
+            const { code, translationKey, message } = getApiError(e);
+            if (code === "VALIDATION_ERROR" && message) {
+                setError(message);
+            } else {
+                setError(t(translationKey));
+            }
         } finally {
             setLoading(false);
         }
@@ -64,13 +66,10 @@ export default function Register() {
 
                 <View style={styles.formGroup}>
                     <Text style={styles.label}>{t("login.phone")}</Text>
-                    <PhoneNumberInput
+                    <PhoneInput
                         value={phone}
                         onChangePhoneNumber={setPhone}
-                        defaultCountry="BJ"
                         onChangeSelectedCountry={setCountryCode}
-                        ref={null}
-                        theme={theme.mode === "dark" ? "dark" : "light"}
                     />
                 </View>
 
