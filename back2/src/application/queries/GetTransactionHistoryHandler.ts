@@ -18,6 +18,7 @@ export interface TransactionHistoryItem {
   id: string;
   type: TxType;
   status: TxStatus;
+  direction: 'IN' | 'OUT';
   amountUsdc: string;
   feeUsdc: string;
   displayAmount: string | null;
@@ -34,6 +35,27 @@ export class GetTransactionHistoryHandler {
     private readonly walletRepo: WalletRepository,
     private readonly txRepo: TransactionRepository
   ) {}
+
+  private getDirection(type: TxType, txWalletId: string, userWalletId: string): 'IN' | 'OUT' {
+    // Deposits are always incoming
+    if (type === 'DEPOSIT_ONRAMP' || type === 'DEPOSIT_CRYPTO') {
+      return 'IN';
+    }
+    // Withdrawals are always outgoing
+    if (type === 'WITHDRAWAL_OFFRAMP' || type === 'WITHDRAWAL_CRYPTO') {
+      return 'OUT';
+    }
+    // Fees are always outgoing
+    if (type === 'FEE') {
+      return 'OUT';
+    }
+    // Refunds are always incoming
+    if (type === 'REFUND') {
+      return 'IN';
+    }
+    // P2P transfers: check if user is sender or receiver
+    return txWalletId === userWalletId ? 'OUT' : 'IN';
+  }
 
   async execute(query: GetTransactionHistoryQuery): Promise<GetTransactionHistoryResult> {
     // Get wallet
@@ -64,6 +86,7 @@ export class GetTransactionHistoryHandler {
         id: tx.id,
         type: tx.type,
         status: tx.status,
+        direction: this.getDirection(tx.type, tx.walletId, wallet.id),
         amountUsdc: tx.amountUsdc.toString(),
         feeUsdc: tx.feeUsdc.toString(),
         displayAmount: tx.displayAmount?.toString() ?? null,

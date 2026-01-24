@@ -12,8 +12,8 @@ import { logger } from '../../shared/utils/logger';
 export interface InitiateWithdrawalCommand {
   userId: string;
   phoneNumber: string;
-  amountUsdc: number;
-  targetCurrency: Currency;
+  fiatAmount: number;  // Amount in fiat currency
+  fiatCurrency: Currency;  // Target fiat currency (e.g., XOF, EUR)
   idempotencyKey?: string;
 }
 
@@ -50,17 +50,17 @@ export class InitiateWithdrawalHandler {
       throw new WalletNotFoundError(command.userId, 'userId');
     }
 
-    // 3. Calculate fee (1.5% for withdrawals)
-    const amountUsdc = new Decimal(command.amountUsdc);
+    // 3. Get exchange rate and convert fiat to USDC
+    const rate = await this.exchangeRateProvider.getRate(command.fiatCurrency);
+    const fiatAmount = new Decimal(command.fiatAmount);
+    const amountUsdc = fiatAmount.div(rate.rate).toDecimalPlaces(6);
+
+    // 4. Calculate fee (1.5% for withdrawals)
     const fee = amountUsdc.mul(0.015).toDecimalPlaces(6);
     const totalRequired = amountUsdc.add(fee);
 
-    // 4. Validate balance
+    // 5. Validate balance
     wallet.assertCanWithdraw(totalRequired);
-
-    // 5. Get exchange rate
-    const rate = await this.exchangeRateProvider.getRate(command.targetCurrency);
-    const displayAmount = amountUsdc.mul(rate.rate).toDecimalPlaces(2);
 
     // 6. Create PENDING transaction
     const transaction = await this.txRepo.create({
@@ -70,8 +70,8 @@ export class InitiateWithdrawalHandler {
       amountUsdc,
       feeUsdc: fee,
       exchangeRate: rate.rate,
-      displayCurrency: command.targetCurrency,
-      displayAmount,
+      displayCurrency: command.fiatCurrency,
+      displayAmount: fiatAmount,
       walletId: wallet.id,
     });
 
@@ -79,8 +79,8 @@ export class InitiateWithdrawalHandler {
     const payoutResult = await this.onRampProvider.initiatePayout({
       userId: command.userId,
       phoneNumber: command.phoneNumber,
-      amount: displayAmount.toNumber(),
-      currency: command.targetCurrency,
+      amount: fiatAmount.toNumber(),
+      currency: command.fiatCurrency,
       idempotencyKey,
     });
 
@@ -89,8 +89,8 @@ export class InitiateWithdrawalHandler {
       transactionId: transaction.id,
       provider: this.onRampProvider.providerCode,
       providerRef: payoutResult.providerRef,
-      fiatCurrency: command.targetCurrency,
-      fiatAmount: displayAmount,
+      fiatCurrency: command.fiatCurrency,
+      fiatAmount: fiatAmount,
       providerStatus: payoutResult.status,
     });
 
@@ -108,7 +108,53 @@ export class InitiateWithdrawalHandler {
       'Withdrawal initiated'
     );
 
+    // 10. Start background polling as fallback for callbacks
+    if (this.onRampProvider.startPayoutPolling) {
+      this.onRampProvider.startPayoutPolling(
+        payoutResult.providerRef,
+        async (pollResult) => {
+          await this.handlePollingResult(transaction.id, pollResult);
+        }
+      );
+    }
+
     return this.toResult(transaction, payoutResult.providerRef);
+  }
+
+  private async handlePollingResult(
+    transactionId: string,
+    pollResult: { status: 'pending' | 'processing' | 'completed' | 'failed' }
+  ): Promise<void> {
+    const transaction = await this.txRepo.findById(transactionId);
+    if (!transaction) {
+      logger.warn({ transactionId }, 'Transaction not found during polling callback');
+      return;
+    }
+
+    // Skip if already in terminal state
+    if (transaction.status === 'COMPLETED' || transaction.status === 'FAILED') {
+      logger.debug({ transactionId, status: transaction.status }, 'Transaction already in terminal state');
+      return;
+    }
+
+    if (pollResult.status === 'completed') {
+      transaction.complete();
+      await this.txRepo.update(transaction);
+
+      // Debit wallet (amount + fee)
+      const wallet = await this.walletRepo.findById(transaction.walletId);
+      if (wallet) {
+        const totalDebit = transaction.amountUsdc.add(transaction.feeUsdc);
+        wallet.debit(totalDebit);
+        await this.walletRepo.update(wallet);
+      }
+
+      logger.info({ transactionId }, 'Withdrawal completed via polling fallback');
+    } else if (pollResult.status === 'failed') {
+      transaction.fail('Payout failed or rejected');
+      await this.txRepo.update(transaction);
+      logger.info({ transactionId }, 'Withdrawal failed via polling fallback');
+    }
   }
 
   private toResult(tx: Transaction, providerRef?: string): InitiateWithdrawalResult {

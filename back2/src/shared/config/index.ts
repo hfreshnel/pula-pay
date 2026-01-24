@@ -21,20 +21,26 @@ const envSchema = z.object({
 
   // Blockchain
   DEFAULT_BLOCKCHAIN: z.string().default('POLYGON_AMOY'),
-  USDC_TOKEN_ID_POLYGON_AMOY: z.string().default('0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582'),
-  USDC_TOKEN_ID_POLYGON: z.string().default('0x3c499c542cef5e3811e1192ce70d8cc03d5c3359'),
+  // Circle Token IDs (UUIDs, not contract addresses)
+  // See: https://developers.circle.com/wallets/monitored-tokens
+  USDC_TOKEN_ID_POLYGON_AMOY: z.string().default('36b6931a-873a-56a8-8a27-b706b17104ee'),
+  USDC_TOKEN_ID_POLYGON: z.string().default('db6905b9-8bcd-5537-8b08-f5548bdf7925'),
 
   // Exchange Rate
   EXCHANGE_RATE_PROVIDER: z.string().default('coingecko'),
   EXCHANGE_RATE_CACHE_TTL_MINUTES: z.string().default('5').transform(Number),
   COINGECKO_API_KEY: z.string().optional(),
+  XOF_EUR_FIXED_RATE: z.string().default('655.957').transform(Number),
 
   // MoMo
+  MTN_MOMO_API_USER: z.string().optional(),
   MTN_MOMO_API_KEY: z.string().optional(),
-  MTN_MOMO_API_SECRET: z.string().optional(),
-  MTN_MOMO_SUBSCRIPTION_KEY: z.string().optional(),
+  MTN_MOMO_COLLECTION_SUBSCRIPTION_KEY: z.string().optional(),
+  MTN_MOMO_DISBURSEMENT_SUBSCRIPTION_KEY: z.string().optional(),
   MTN_MOMO_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
   MTN_MOMO_CALLBACK_URL: z.string().optional(),
+  MTN_MOMO_POLLING_INTERVAL_MS: z.string().default('5000').transform(Number),
+  MTN_MOMO_POLLING_MAX_ATTEMPTS: z.string().default('24').transform(Number), // 2 minutes with 5s interval
 
   // JWT
   JWT_SECRET: z.string().default('change-me-in-production'),
@@ -92,14 +98,18 @@ export const config = {
     provider: env.EXCHANGE_RATE_PROVIDER,
     cacheTtlMinutes: env.EXCHANGE_RATE_CACHE_TTL_MINUTES,
     coingeckoApiKey: env.COINGECKO_API_KEY,
+    xofEurFixedRate: env.XOF_EUR_FIXED_RATE,
   },
 
   momo: {
+    apiUser: env.MTN_MOMO_API_USER,
     apiKey: env.MTN_MOMO_API_KEY,
-    apiSecret: env.MTN_MOMO_API_SECRET,
-    subscriptionKey: env.MTN_MOMO_SUBSCRIPTION_KEY,
+    collectionSubscriptionKey: env.MTN_MOMO_COLLECTION_SUBSCRIPTION_KEY,
+    disbursementSubscriptionKey: env.MTN_MOMO_DISBURSEMENT_SUBSCRIPTION_KEY,
     environment: env.MTN_MOMO_ENVIRONMENT,
     callbackUrl: env.MTN_MOMO_CALLBACK_URL,
+    pollingIntervalMs: env.MTN_MOMO_POLLING_INTERVAL_MS,
+    pollingMaxAttempts: env.MTN_MOMO_POLLING_MAX_ATTEMPTS,
   },
 
   jwt: {

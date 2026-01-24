@@ -75,7 +75,7 @@ export class InitiateDepositHandler {
       amount: command.fiatAmount,
       currency: command.fiatCurrency,
       idempotencyKey,
-      callbackUrl: `${config.apiUrl}/webhooks/momo`,
+      callbackUrl: config.momo.callbackUrl ?? `${config.apiUrl}/webhooks/momo`,
     });
 
     // 6. Create OnRampTransaction
@@ -101,7 +101,52 @@ export class InitiateDepositHandler {
       'Deposit initiated'
     );
 
+    // 8. Start background polling as fallback for callbacks
+    if (this.onRampProvider.startDepositPolling) {
+      this.onRampProvider.startDepositPolling(
+        depositResult.providerRef,
+        async (pollResult) => {
+          await this.handlePollingResult(transaction.id, pollResult);
+        }
+      );
+    }
+
     return this.toResult(transaction, depositResult.providerRef);
+  }
+
+  private async handlePollingResult(
+    transactionId: string,
+    pollResult: { status: 'pending' | 'processing' | 'completed' | 'failed' }
+  ): Promise<void> {
+    const transaction = await this.txRepo.findById(transactionId);
+    if (!transaction) {
+      logger.warn({ transactionId }, 'Transaction not found during polling callback');
+      return;
+    }
+
+    // Skip if already in terminal state
+    if (transaction.status === 'COMPLETED' || transaction.status === 'FAILED') {
+      logger.debug({ transactionId, status: transaction.status }, 'Transaction already in terminal state');
+      return;
+    }
+
+    if (pollResult.status === 'completed') {
+      transaction.complete();
+      await this.txRepo.update(transaction);
+
+      // Credit wallet
+      const wallet = await this.walletRepo.findById(transaction.walletId);
+      if (wallet) {
+        wallet.credit(transaction.amountUsdc);
+        await this.walletRepo.update(wallet);
+      }
+
+      logger.info({ transactionId }, 'Deposit completed via polling fallback');
+    } else if (pollResult.status === 'failed') {
+      transaction.fail('Payment failed or rejected');
+      await this.txRepo.update(transaction);
+      logger.info({ transactionId }, 'Deposit failed via polling fallback');
+    }
   }
 
   private toResult(tx: Transaction, providerRef?: string): InitiateDepositResult {

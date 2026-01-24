@@ -59,4 +59,36 @@ export interface OnRampProvider {
    * Validate incoming webhook
    */
   validateWebhook(headers: Record<string, string>, body: unknown): boolean;
+
+  /**
+   * Poll deposit status until terminal state (fallback for callbacks)
+   */
+  pollDepositUntilComplete?(
+    providerRef: string,
+    onStatusChange?: (result: DepositResult) => Promise<void>
+  ): Promise<DepositResult>;
+
+  /**
+   * Poll payout status until terminal state (fallback for callbacks)
+   */
+  pollPayoutUntilComplete?(
+    providerRef: string,
+    onStatusChange?: (result: PayoutResult) => Promise<void>
+  ): Promise<PayoutResult>;
+
+  /**
+   * Start background polling for deposit (fire-and-forget)
+   */
+  startDepositPolling?(
+    providerRef: string,
+    onStatusChange: (result: DepositResult) => Promise<void>
+  ): void;
+
+  /**
+   * Start background polling for payout (fire-and-forget)
+   */
+  startPayoutPolling?(
+    providerRef: string,
+    onStatusChange: (result: PayoutResult) => Promise<void>
+  ): void;
 }

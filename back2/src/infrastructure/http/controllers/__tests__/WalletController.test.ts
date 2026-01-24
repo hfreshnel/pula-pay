@@ -7,8 +7,13 @@ const mockCreateWalletHandler = { execute: jest.fn() };
 const mockDepositHandler = { execute: jest.fn() };
 const mockWithdrawHandler = { execute: jest.fn() };
 const mockTransferHandler = { execute: jest.fn() };
+const mockSimpleTransferHandler = { execute: jest.fn() };
+const mockSyncStatusHandler = { execute: jest.fn() };
 const mockBalanceHandler = { execute: jest.fn() };
 const mockHistoryHandler = { execute: jest.fn() };
+const mockTransactionByIdHandler = { execute: jest.fn() };
+const mockAddressHandler = { execute: jest.fn() };
+const mockResolveRecipientHandler = { execute: jest.fn() };
 
 describe('WalletController', () => {
   let controller: WalletController;
@@ -22,8 +27,13 @@ describe('WalletController', () => {
       mockDepositHandler as any,
       mockWithdrawHandler as any,
       mockTransferHandler as any,
+      mockSimpleTransferHandler as any,
+      mockSyncStatusHandler as any,
       mockBalanceHandler as any,
-      mockHistoryHandler as any
+      mockHistoryHandler as any,
+      mockTransactionByIdHandler as any,
+      mockAddressHandler as any,
+      mockResolveRecipientHandler as any
     );
 
     mockReq = {

@@ -31,8 +31,12 @@ export class PrismaTransactionRepository implements TransactionRepository {
     filters?: TransactionFilters,
     pagination?: PaginationParams
   ): Promise<PaginatedResult<Transaction>> {
-    const where = {
-      walletId,
+    const where: Prisma.TransactionWhereInput = {
+      // Include transactions where user is sender OR receiver
+      OR: [
+        { walletId },
+        { counterpartyId: walletId },
+      ],
       ...(filters?.type && { type: filters.type }),
       ...(filters?.status && { status: filters.status }),
       ...(filters?.fromDate || filters?.toDate

@@ -6,10 +6,13 @@ import { CreateWalletHandler, CreateWalletResult } from '../../../application/co
 import { InitiateDepositHandler, InitiateDepositResult } from '../../../application/commands/InitiateDepositHandler';
 import { InitiateWithdrawalHandler, InitiateWithdrawalResult } from '../../../application/commands/InitiateWithdrawalHandler';
 import { ExecuteTransferHandler, TransferResult } from '../../../application/commands/ExecuteTransferHandler';
+import { ExecuteSimpleTransferHandler, SimpleTransferResult } from '../../../application/commands/ExecuteSimpleTransferHandler';
 import { SyncWalletStatusHandler, SyncWalletStatusResult } from '../../../application/commands/SyncWalletStatusHandler';
 import { GetBalanceHandler, GetBalanceResult } from '../../../application/queries/GetBalanceHandler';
 import { GetTransactionHistoryHandler, GetTransactionHistoryResult } from '../../../application/queries/GetTransactionHistoryHandler';
+import { GetTransactionByIdHandler, GetTransactionByIdResult } from '../../../application/queries/GetTransactionByIdHandler';
 import { GetWalletAddressHandler, GetWalletAddressResult } from '../../../application/queries/GetWalletAddressHandler';
+import { ResolveRecipientHandler, ResolveRecipientResult } from '../../../application/queries/ResolveRecipientHandler';
 
 // Validation schemas
 const createWalletSchema = z.object({
@@ -24,7 +27,7 @@ const depositSchema = z.object({
 
 const withdrawSchema = z.object({
   phoneNumber: z.string().min(8).max(15),
-  amountUsdc: z.number().positive(),
+  amount: z.number().positive(),  // Amount in target currency (fiat)
   targetCurrency: z.nativeEnum(Currency),
 });
 
@@ -48,16 +51,27 @@ const historyQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).optional(),
 });
 
+const resolveRecipientSchema = z.object({
+  phone: z.string().min(8).max(15).optional(),
+  address: z.string().optional(),
+}).refine(
+  (data) => data.phone || data.address,
+  { message: 'Either phone or address must be provided' }
+);
+
 export class WalletController {
   constructor(
     private readonly createWalletHandler: CreateWalletHandler,
     private readonly depositHandler: InitiateDepositHandler,
     private readonly withdrawHandler: InitiateWithdrawalHandler,
     private readonly transferHandler: ExecuteTransferHandler,
+    private readonly simpleTransferHandler: ExecuteSimpleTransferHandler,
     private readonly syncStatusHandler: SyncWalletStatusHandler,
     private readonly balanceHandler: GetBalanceHandler,
     private readonly historyHandler: GetTransactionHistoryHandler,
-    private readonly addressHandler: GetWalletAddressHandler
+    private readonly transactionByIdHandler: GetTransactionByIdHandler,
+    private readonly addressHandler: GetWalletAddressHandler,
+    private readonly resolveRecipientHandler: ResolveRecipientHandler
   ) {}
 
   createWallet = async (
@@ -147,8 +161,8 @@ export class WalletController {
       const result = await this.withdrawHandler.execute({
         userId: req.userId!,
         phoneNumber: data.phoneNumber,
-        amountUsdc: data.amountUsdc,
-        targetCurrency: data.targetCurrency,
+        fiatAmount: data.amount,
+        fiatCurrency: data.targetCurrency,
       });
 
       res.status(202).json({
@@ -193,6 +207,35 @@ export class WalletController {
     }
   };
 
+  simpleTransfer = async (
+    req: Request,
+    res: Response<ApiResponse<SimpleTransferResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const data = transferSchema.parse(req.body);
+      const result = await this.simpleTransferHandler.execute({
+        senderUserId: req.userId!,
+        recipientPhone: data.recipientPhone,
+        recipientAddress: data.recipientAddress,
+        amount: data.amount,
+        currency: data.currency,
+        description: data.description,
+      });
+
+      res.status(202).json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getTransactionHistory = async (
     req: Request,
     res: Response<ApiResponse<GetTransactionHistoryResult>>,
@@ -208,6 +251,31 @@ export class WalletController {
         toDate: query.toDate ? new Date(query.toDate) : undefined,
         page: query.page,
         limit: query.limit,
+      });
+
+      res.json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getTransaction = async (
+    req: Request,
+    res: Response<ApiResponse<GetTransactionByIdResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { txId } = req.params;
+      const result = await this.transactionByIdHandler.execute({
+        userId: req.userId!,
+        transactionId: txId,
       });
 
       res.json({
@@ -269,6 +337,24 @@ export class WalletController {
           timestamp: new Date().toISOString(),
         },
       });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  resolveRecipient = async (
+    req: Request,
+    res: Response<ResolveRecipientResult>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const query = resolveRecipientSchema.parse(req.query);
+      const result = await this.resolveRecipientHandler.execute({
+        phone: query.phone,
+        address: query.address,
+      });
+
+      res.json(result);
     } catch (error) {
       next(error);
     }

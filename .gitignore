@@ -4,6 +4,7 @@ Thumbs.db
 
 # IDEs
 .vscode/
+.mcp.json
 
 # Build outputs
 bin/
@@ -26,3 +27,6 @@ yarn-error.log
 # Env / secrets
 .env
 *.local.json
+
+#other
+MIGRATION_PLAN_CIRCLE_USDC.md

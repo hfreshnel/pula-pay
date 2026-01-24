@@ -16,13 +16,16 @@ import { CreateWalletHandler } from '../../../application/commands/CreateWalletH
 import { InitiateDepositHandler } from '../../../application/commands/InitiateDepositHandler';
 import { InitiateWithdrawalHandler } from '../../../application/commands/InitiateWithdrawalHandler';
 import { ExecuteTransferHandler } from '../../../application/commands/ExecuteTransferHandler';
+import { ExecuteSimpleTransferHandler } from '../../../application/commands/ExecuteSimpleTransferHandler';
 import { ConfirmDepositHandler } from '../../../application/commands/ConfirmDepositHandler';
 import { ActivateWalletHandler } from '../../../application/commands/ActivateWalletHandler';
 import { SyncWalletStatusHandler } from '../../../application/commands/SyncWalletStatusHandler';
 import { GetBalanceHandler } from '../../../application/queries/GetBalanceHandler';
 import { GetTransactionHistoryHandler } from '../../../application/queries/GetTransactionHistoryHandler';
+import { GetTransactionByIdHandler } from '../../../application/queries/GetTransactionByIdHandler';
 import { GetExchangeRateHandler } from '../../../application/queries/GetExchangeRateHandler';
 import { GetWalletAddressHandler } from '../../../application/queries/GetWalletAddressHandler';
+import { ResolveRecipientHandler } from '../../../application/queries/ResolveRecipientHandler';
 import { CurrencyConversionService } from '../../../application/services/CurrencyConversionService';
 
 // Repositories
@@ -55,18 +58,21 @@ export function createRouter(prisma: PrismaClient): Router {
   const depositHandler = new InitiateDepositHandler(walletRepo, txRepo, momoAdapter, exchangeRateAdapter);
   const withdrawHandler = new InitiateWithdrawalHandler(walletRepo, txRepo, momoAdapter, exchangeRateAdapter);
   const transferHandler = new ExecuteTransferHandler( prisma, walletRepo, txRepo, circleAdapter, exchangeRateAdapter);
+  const simpleTransferHandler = new ExecuteSimpleTransferHandler(prisma, walletRepo, txRepo, exchangeRateAdapter);
   const confirmDepositHandler = new ConfirmDepositHandler(prisma, txRepo, walletRepo);
   const activateWalletHandler = new ActivateWalletHandler(walletRepo, circleAdapter);
   const syncWalletStatusHandler = new SyncWalletStatusHandler(walletRepo, circleAdapter);
   const balanceHandler = new GetBalanceHandler(userRepo, walletRepo, exchangeRateAdapter);
   const historyHandler = new GetTransactionHistoryHandler(walletRepo, txRepo);
+  const transactionByIdHandler = new GetTransactionByIdHandler(walletRepo, txRepo);
   const addressHandler = new GetWalletAddressHandler(walletRepo);
   const rateHandler = new GetExchangeRateHandler(exchangeRateAdapter);
+  const resolveRecipientHandler = new ResolveRecipientHandler(userRepo, walletRepo);
   const conversionService = new CurrencyConversionService(exchangeRateAdapter);
 
   // Initialize controllers
   const authController = new AuthController(userRepo);
-  const walletController = new WalletController(createWalletHandler, depositHandler, withdrawHandler, transferHandler, syncWalletStatusHandler, balanceHandler, historyHandler, addressHandler);
+  const walletController = new WalletController(createWalletHandler, depositHandler, withdrawHandler, transferHandler, simpleTransferHandler, syncWalletStatusHandler, balanceHandler, historyHandler, transactionByIdHandler, addressHandler, resolveRecipientHandler);
   const webhookController = new WebhookController(confirmDepositHandler, activateWalletHandler, momoAdapter);
   const rateController = new ExchangeRateController(rateHandler, conversionService);
   const healthController = new HealthController(prisma);
@@ -103,7 +109,10 @@ export function createRouter(prisma: PrismaClient): Router {
   router.post('/wallet/deposit', authMiddleware, walletController.initiateDeposit);
   router.post('/wallet/withdraw', authMiddleware, walletController.initiateWithdrawal);
   router.post('/wallet/transfer', authMiddleware, walletController.transfer);
+  router.post('/wallet/transferable', authMiddleware, walletController.simpleTransfer);
+  router.get('/wallet/transactions/:txId', authMiddleware, walletController.getTransaction);
   router.get('/wallet/transactions', authMiddleware, walletController.getTransactionHistory);
+  router.get('/wallet/resolve-recipient', authMiddleware, walletController.resolveRecipient);
 
   return router;
 }

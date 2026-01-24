@@ -95,11 +95,11 @@ export class CoingeckoAdapter implements ExchangeRateProvider {
     }
 
     // XOF is not directly available on CoinGecko, calculate from EUR
-    // 1 EUR = 655.957 XOF (fixed rate)
+    // 1 EUR = 655.957 XOF (fixed rate from CFA Franc peg)
     if (needsXof) {
       const eurRate = results.get('EUR');
       if (eurRate) {
-        const xofRate = eurRate.rate.mul(655.957);
+        const xofRate = eurRate.rate.mul(config.exchangeRate.xofEurFixedRate);
         results.set('XOF', {
           baseCurrency: 'USDC',
           quoteCurrency: 'XOF',

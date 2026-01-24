@@ -151,10 +151,7 @@ export class CircleWalletAdapter implements WalletProvider {
         tokenId: params.tokenId,
         destinationAddress: params.toAddress,
         amounts: [params.amount],
-        fee: {
-          type: 'level',
-          config: { feeLevel: 'MEDIUM' },
-        },
+        feeLevel: 'MEDIUM', // For raw API calls, feeLevel goes at root level
       },
       true // requires entitySecretCiphertext
     );
