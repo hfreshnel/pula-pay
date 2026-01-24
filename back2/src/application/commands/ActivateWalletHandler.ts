@@ -1,5 +1,4 @@
 import { WalletRepository } from '../../domain/ports/repositories/WalletRepository';
-import { WalletProvider } from '../../domain/ports/WalletProvider';
 import { WalletNotFoundError } from '../../domain/errors/WalletNotFoundError';
 import { logger } from '../../shared/utils/logger';
 
@@ -16,7 +15,6 @@ export interface ActivateWalletResult {
 export class ActivateWalletHandler {
   constructor(
     private readonly walletRepo: WalletRepository,
-    private readonly walletProvider: WalletProvider
   ) {}
 
   async execute(command: ActivateWalletCommand): Promise<ActivateWalletResult> {

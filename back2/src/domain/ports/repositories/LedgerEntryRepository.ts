@@ -1,9 +1,10 @@
+import { AccountType } from '@prisma/client';
 import { LedgerEntry } from '../../services/LedgerService';
 import { PaginationParams, PaginatedResult } from '../../../shared/types';
 
 export interface LedgerEntryFilters {
   walletId?: string;
-  accountType?: string;
+  accountType?: AccountType;
   fromDate?: Date;
   toDate?: Date;
 }
