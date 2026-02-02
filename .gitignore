@@ -31,3 +31,6 @@ yarn-error.log
 # tests
 **/coverage/
 **/__tests__/
+
+# Doc
+**/docs/
