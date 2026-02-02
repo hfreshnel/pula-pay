@@ -28,5 +28,9 @@ yarn-error.log
 .env
 *.local.json
 
-#other
-MIGRATION_PLAN_CIRCLE_USDC.md
+# tests
+**/coverage/
+**/__tests__/
+
+# Doc
+**/docs/

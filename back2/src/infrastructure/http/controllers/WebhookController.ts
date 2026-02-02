@@ -36,7 +36,7 @@ export class WebhookController {
   handleMomoWebhook = async (
     req: Request,
     res: Response<ApiResponse>,
-    next: NextFunction
+    _next: NextFunction
   ): Promise<void> => {
     try {
       // Validate webhook
@@ -104,7 +104,7 @@ export class WebhookController {
   handleCircleWebhook = async (
     req: Request,
     res: Response<ApiResponse>,
-    next: NextFunction
+    _next: NextFunction
   ): Promise<void> => {
     try {
       const payload = req.body as CircleWebhookPayload;
