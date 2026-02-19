@@ -240,3 +240,8 @@ npx expo start
 ```bash
 docker-compose up db
 ```
+
+## Related Repositories
+
+- [momo-backend-mvp](https://github.com/hfreshnel/momo-backend-mvp) — Earlier backend prototype (Express + MoMo integration)
+- [pula-pay-front](https://github.com/hfreshnel/pula-pay-front) — Web dashboard (React + Vite)
