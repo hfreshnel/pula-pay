@@ -13,6 +13,10 @@ import { GetTransactionHistoryHandler, GetTransactionHistoryResult } from '../..
 import { GetTransactionByIdHandler, GetTransactionByIdResult } from '../../../application/queries/GetTransactionByIdHandler';
 import { GetWalletAddressHandler, GetWalletAddressResult } from '../../../application/queries/GetWalletAddressHandler';
 import { ResolveRecipientHandler, ResolveRecipientResult } from '../../../application/queries/ResolveRecipientHandler';
+import { GetOnrampQuoteHandler } from '../../../application/queries/GetOnrampQuoteHandler';
+import { GetOfframpQuoteHandler } from '../../../application/queries/GetOfframpQuoteHandler';
+import { OnrampQuoteResult } from '../../../domain/ports/QuoteProvider';
+import { OfframpQuoteResult } from '../../../domain/ports/QuoteProvider';
 
 // Validation schemas
 const createWalletSchema = z.object({
@@ -20,15 +24,17 @@ const createWalletSchema = z.object({
 });
 
 const depositSchema = z.object({
-  phoneNumber: z.string().min(8).max(15),
   amount: z.number().positive(),
   currency: z.nativeEnum(Currency),
+  country: z.string().length(2).default('US'),
+  paymentMethod: z.enum(['CARD', 'ACH_BANK_ACCOUNT', 'APPLE_PAY']).default('CARD'),
 });
 
 const withdrawSchema = z.object({
-  phoneNumber: z.string().min(8).max(15),
   amount: z.number().positive(),  // Amount in target currency (fiat)
   targetCurrency: z.nativeEnum(Currency),
+  country: z.string().length(2).default('US'),
+  paymentMethod: z.enum(['ACH_BANK_ACCOUNT', 'CARD']).default('ACH_BANK_ACCOUNT'),
 });
 
 const transferSchema = z.object({
@@ -59,6 +65,20 @@ const resolveRecipientSchema = z.object({
   { message: 'Either phone or address must be provided' }
 );
 
+const onrampQuoteSchema = z.object({
+  amount: z.coerce.number().positive(),
+  currency: z.nativeEnum(Currency),
+  country: z.string().length(2).default('US'),
+  paymentMethod: z.enum(['CARD', 'ACH_BANK_ACCOUNT', 'APPLE_PAY']).default('CARD'),
+});
+
+const offrampQuoteSchema = z.object({
+  sellAmount: z.coerce.number().positive(),
+  cashoutCurrency: z.nativeEnum(Currency),
+  country: z.string().length(2).default('US'),
+  paymentMethod: z.enum(['ACH_BANK_ACCOUNT', 'CARD']).default('ACH_BANK_ACCOUNT'),
+});
+
 export class WalletController {
   constructor(
     private readonly createWalletHandler: CreateWalletHandler,
@@ -71,7 +91,9 @@ export class WalletController {
     private readonly historyHandler: GetTransactionHistoryHandler,
     private readonly transactionByIdHandler: GetTransactionByIdHandler,
     private readonly addressHandler: GetWalletAddressHandler,
-    private readonly resolveRecipientHandler: ResolveRecipientHandler
+    private readonly resolveRecipientHandler: ResolveRecipientHandler,
+    private readonly onrampQuoteHandler: GetOnrampQuoteHandler,
+    private readonly offrampQuoteHandler: GetOfframpQuoteHandler
   ) {}
 
   createWallet = async (
@@ -133,9 +155,10 @@ export class WalletController {
       const data = depositSchema.parse(req.body);
       const result = await this.depositHandler.execute({
         userId: req.userId!,
-        phoneNumber: data.phoneNumber,
         fiatAmount: data.amount,
         fiatCurrency: data.currency,
+        country: data.country,
+        paymentMethod: data.paymentMethod,
       });
 
       res.status(202).json({
@@ -160,9 +183,10 @@ export class WalletController {
       const data = withdrawSchema.parse(req.body);
       const result = await this.withdrawHandler.execute({
         userId: req.userId!,
-        phoneNumber: data.phoneNumber,
         fiatAmount: data.amount,
         fiatCurrency: data.targetCurrency,
+        country: data.country,
+        paymentMethod: data.paymentMethod,
       });
 
       res.status(202).json({
@@ -355,6 +379,60 @@ export class WalletController {
       });
 
       res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getOnrampQuote = async (
+    req: Request,
+    res: Response<ApiResponse<OnrampQuoteResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const query = onrampQuoteSchema.parse(req.query);
+      const result = await this.onrampQuoteHandler.execute({
+        paymentAmount: query.amount,
+        paymentCurrency: query.currency,
+        country: query.country,
+        paymentMethod: query.paymentMethod,
+      });
+
+      res.json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getOfframpQuote = async (
+    req: Request,
+    res: Response<ApiResponse<OfframpQuoteResult>>,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const query = offrampQuoteSchema.parse(req.query);
+      const result = await this.offrampQuoteHandler.execute({
+        sellAmount: query.sellAmount,
+        cashoutCurrency: query.cashoutCurrency,
+        country: query.country,
+        paymentMethod: query.paymentMethod,
+      });
+
+      res.json({
+        success: true,
+        data: result,
+        meta: {
+          requestId: req.headers['x-request-id'] as string,
+          timestamp: new Date().toISOString(),
+        },
+      });
     } catch (error) {
       next(error);
     }

@@ -7,14 +7,16 @@ import { ExchangeRateProvider } from '../../domain/ports/ExchangeRateProvider';
 import { Transaction } from '../../domain/entities/Transaction';
 import { WalletNotFoundError } from '../../domain/errors/WalletNotFoundError';
 import { generateIdempotencyKey } from '../../shared/utils/idempotency';
+import { config } from '../../shared/config';
 import { logger } from '../../shared/utils/logger';
 
 export interface InitiateWithdrawalCommand {
   userId: string;
-  phoneNumber: string;
   fiatAmount: number;  // Amount in fiat currency
-  fiatCurrency: Currency;  // Target fiat currency (e.g., XOF, EUR)
+  fiatCurrency: Currency;  // Target fiat currency (e.g., USD, EUR)
   idempotencyKey?: string;
+  country?: string;
+  paymentMethod?: string;
 }
 
 export interface InitiateWithdrawalResult {
@@ -25,6 +27,11 @@ export interface InitiateWithdrawalResult {
   feeUsdc: string;
   displayAmount: string;
   displayCurrency: Currency;
+  paymentUrl?: string;
+  fees?: {
+    coinbaseFee?: string;
+    cashoutTotal?: string;
+  };
 }
 
 export class InitiateWithdrawalHandler {
@@ -75,13 +82,17 @@ export class InitiateWithdrawalHandler {
       walletId: wallet.id,
     });
 
-    // 7. Initiate MoMo payout
+    // 7. Initiate payout via provider (Coinbase CDP)
     const payoutResult = await this.onRampProvider.initiatePayout({
       userId: command.userId,
-      phoneNumber: command.phoneNumber,
-      amount: fiatAmount.toNumber(),
+      amount: amountUsdc.toNumber(),
       currency: command.fiatCurrency,
       idempotencyKey,
+      walletAddress: wallet.address,
+      blockchain: wallet.blockchain,
+      country: command.country ?? config.coinbase.defaultCountry,
+      paymentMethod: command.paymentMethod ?? 'ACH_BANK_ACCOUNT',
+      cashoutCurrency: command.fiatCurrency,
     });
 
     // 8. Create OnRampTransaction (used for off-ramp too)
@@ -95,6 +106,7 @@ export class InitiateWithdrawalHandler {
     });
 
     // 9. Update status → PROCESSING
+    const compositeRef = `${command.userId}:${payoutResult.providerRef}`;
     transaction.markProcessing(payoutResult.providerRef);
     await this.txRepo.update(transaction);
 
@@ -104,6 +116,7 @@ export class InitiateWithdrawalHandler {
         providerRef: payoutResult.providerRef,
         amountUsdc: amountUsdc.toString(),
         fee: fee.toString(),
+        paymentUrl: payoutResult.paymentUrl,
       },
       'Withdrawal initiated'
     );
@@ -111,14 +124,14 @@ export class InitiateWithdrawalHandler {
     // 10. Start background polling as fallback for callbacks
     if (this.onRampProvider.startPayoutPolling) {
       this.onRampProvider.startPayoutPolling(
-        payoutResult.providerRef,
+        compositeRef,
         async (pollResult) => {
           await this.handlePollingResult(transaction.id, pollResult);
         }
       );
     }
 
-    return this.toResult(transaction, payoutResult.providerRef);
+    return this.toResult(transaction, payoutResult.providerRef, payoutResult.paymentUrl, payoutResult.fees);
   }
 
   private async handlePollingResult(
@@ -157,7 +170,12 @@ export class InitiateWithdrawalHandler {
     }
   }
 
-  private toResult(tx: Transaction, providerRef?: string): InitiateWithdrawalResult {
+  private toResult(
+    tx: Transaction,
+    providerRef?: string,
+    paymentUrl?: string,
+    fees?: { coinbaseFee?: string; cashoutTotal?: string }
+  ): InitiateWithdrawalResult {
     return {
       transactionId: tx.id,
       providerRef: providerRef ?? tx.externalRef ?? '',
@@ -165,7 +183,9 @@ export class InitiateWithdrawalHandler {
       amountUsdc: tx.amountUsdc.toString(),
       feeUsdc: tx.feeUsdc.toString(),
       displayAmount: tx.displayAmount?.toString() ?? '0',
-      displayCurrency: tx.displayCurrency ?? 'XOF',
+      displayCurrency: tx.displayCurrency ?? 'USD',
+      paymentUrl,
+      fees,
     };
   }
 }

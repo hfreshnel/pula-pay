@@ -36,9 +36,10 @@ describe('InitiateDepositHandler', () => {
   describe('execute', () => {
     const baseCommand: InitiateDepositCommand = {
       userId: 'user-123',
-      phoneNumber: '+22501234567',
       fiatAmount: 10000,
       fiatCurrency: 'XOF',
+      country: 'US',
+      paymentMethod: 'CARD',
     };
 
     it('should initiate deposit successfully', async () => {
@@ -256,9 +257,10 @@ describe('InitiateDepositHandler', () => {
       const wallet = walletFixtures.activeWithBalance();
       const eurCommand: InitiateDepositCommand = {
         userId: 'user-123',
-        phoneNumber: '+22501234567',
         fiatAmount: 100,
         fiatCurrency: 'EUR',
+        country: 'US',
+        paymentMethod: 'CARD',
       };
 
       mockTxRepo.findByIdempotencyKey.mockResolvedValue(null);

@@ -48,7 +48,7 @@ export class LedgerService {
   }
 
   /**
-   * Create entries for on-ramp deposit (MoMo → USDC)
+   * Create entries for on-ramp deposit (Fiat → USDC)
    */
   createDepositEntries(
     transactionId: string,
@@ -95,7 +95,7 @@ export class LedgerService {
   }
 
   /**
-   * Create entries for off-ramp withdrawal (USDC → MoMo)
+   * Create entries for off-ramp withdrawal (USDC → Fiat)
    */
   createWithdrawalEntries(
     transactionId: string,

@@ -32,15 +32,13 @@ const envSchema = z.object({
   COINGECKO_API_KEY: z.string().optional(),
   XOF_EUR_FIXED_RATE: z.string().default('655.957').transform(Number),
 
-  // MoMo
-  MTN_MOMO_API_USER: z.string().optional(),
-  MTN_MOMO_API_KEY: z.string().optional(),
-  MTN_MOMO_COLLECTION_SUBSCRIPTION_KEY: z.string().optional(),
-  MTN_MOMO_DISBURSEMENT_SUBSCRIPTION_KEY: z.string().optional(),
-  MTN_MOMO_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
-  MTN_MOMO_CALLBACK_URL: z.string().optional(),
-  MTN_MOMO_POLLING_INTERVAL_MS: z.string().default('5000').transform(Number),
-  MTN_MOMO_POLLING_MAX_ATTEMPTS: z.string().default('24').transform(Number), // 2 minutes with 5s interval
+  // Coinbase CDP (Onramp/Offramp)
+  COINBASE_CDP_API_KEY_NAME: z.string().optional(),
+  COINBASE_CDP_API_KEY_PRIVATE_KEY: z.string().optional(),
+  COINBASE_CDP_BASE_URL: z.string().default('https://api.developer.coinbase.com'),
+  COINBASE_CDP_POLLING_INTERVAL_MS: z.string().default('10000').transform(Number),
+  COINBASE_CDP_POLLING_MAX_ATTEMPTS: z.string().default('60').transform(Number), // 10 minutes with 10s interval
+  COINBASE_CDP_DEFAULT_COUNTRY: z.string().default('US'),
 
   // JWT
   JWT_SECRET: z.string().default('change-me-in-production'),
@@ -101,15 +99,13 @@ export const config = {
     xofEurFixedRate: env.XOF_EUR_FIXED_RATE,
   },
 
-  momo: {
-    apiUser: env.MTN_MOMO_API_USER,
-    apiKey: env.MTN_MOMO_API_KEY,
-    collectionSubscriptionKey: env.MTN_MOMO_COLLECTION_SUBSCRIPTION_KEY,
-    disbursementSubscriptionKey: env.MTN_MOMO_DISBURSEMENT_SUBSCRIPTION_KEY,
-    environment: env.MTN_MOMO_ENVIRONMENT,
-    callbackUrl: env.MTN_MOMO_CALLBACK_URL,
-    pollingIntervalMs: env.MTN_MOMO_POLLING_INTERVAL_MS,
-    pollingMaxAttempts: env.MTN_MOMO_POLLING_MAX_ATTEMPTS,
+  coinbase: {
+    apiKeyName: env.COINBASE_CDP_API_KEY_NAME,
+    apiKeyPrivateKey: env.COINBASE_CDP_API_KEY_PRIVATE_KEY,
+    baseUrl: env.COINBASE_CDP_BASE_URL,
+    pollingIntervalMs: env.COINBASE_CDP_POLLING_INTERVAL_MS,
+    pollingMaxAttempts: env.COINBASE_CDP_POLLING_MAX_ATTEMPTS,
+    defaultCountry: env.COINBASE_CDP_DEFAULT_COUNTRY,
   },
 
   jwt: {

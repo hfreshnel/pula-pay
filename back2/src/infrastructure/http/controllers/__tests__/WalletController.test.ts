@@ -33,7 +33,9 @@ describe('WalletController', () => {
       mockHistoryHandler as any,
       mockTransactionByIdHandler as any,
       mockAddressHandler as any,
-      mockResolveRecipientHandler as any
+      mockResolveRecipientHandler as any,
+      { execute: jest.fn() } as any,
+      { execute: jest.fn() } as any
     );
 
     mockReq = {
@@ -182,17 +184,19 @@ describe('WalletController', () => {
     it('should initiate deposit and return 202', async () => {
       // Arrange
       mockReq.body = {
-        phoneNumber: '+22501234567',
-        amount: 10000,
-        currency: 'XOF',
+        amount: 100,
+        currency: 'USD',
+        country: 'US',
+        paymentMethod: 'CARD',
       };
       mockDepositHandler.execute.mockResolvedValue({
         transactionId: 'tx-123',
-        providerRef: 'momo-ref-123',
+        providerRef: 'coinbase-quote-123',
         status: 'PROCESSING',
-        amountUsdc: '16.57',
-        displayAmount: '10000',
-        displayCurrency: 'XOF',
+        amountUsdc: '97.50',
+        displayAmount: '100',
+        displayCurrency: 'USD',
+        paymentUrl: 'https://pay.coinbase.com/buy/select-asset?sessionToken=abc',
       });
 
       // Act
@@ -205,6 +209,7 @@ describe('WalletController', () => {
         data: expect.objectContaining({
           transactionId: 'tx-123',
           status: 'PROCESSING',
+          paymentUrl: expect.any(String),
         }),
         meta: expect.any(Object),
       });
@@ -213,8 +218,8 @@ describe('WalletController', () => {
     it('should validate required fields', async () => {
       // Arrange
       mockReq.body = {
-        // Missing phoneNumber and amount
-        currency: 'XOF',
+        // Missing amount
+        currency: 'USD',
       };
 
       // Act
@@ -227,9 +232,8 @@ describe('WalletController', () => {
     it('should validate positive amount', async () => {
       // Arrange
       mockReq.body = {
-        phoneNumber: '+22501234567',
         amount: -100,
-        currency: 'XOF',
+        currency: 'USD',
       };
 
       // Act
@@ -242,8 +246,7 @@ describe('WalletController', () => {
     it('should validate currency enum', async () => {
       // Arrange
       mockReq.body = {
-        phoneNumber: '+22501234567',
-        amount: 10000,
+        amount: 100,
         currency: 'INVALID',
       };
 
@@ -259,17 +262,19 @@ describe('WalletController', () => {
     it('should initiate withdrawal and return 202', async () => {
       // Arrange
       mockReq.body = {
-        phoneNumber: '+22501234567',
-        amountUsdc: 50,
-        targetCurrency: 'XOF',
+        amount: 50,
+        targetCurrency: 'EUR',
+        country: 'US',
+        paymentMethod: 'ACH_BANK_ACCOUNT',
       };
       mockWithdrawHandler.execute.mockResolvedValue({
         transactionId: 'tx-456',
-        providerRef: 'momo-ref-456',
+        providerRef: 'coinbase-quote-456',
         status: 'PROCESSING',
         amountUsdc: '50',
-        displayAmount: '30172.50',
-        displayCurrency: 'XOF',
+        displayAmount: '48.50',
+        displayCurrency: 'EUR',
+        paymentUrl: 'https://pay.coinbase.com/sell?sessionToken=xyz',
       });
 
       // Act
@@ -279,9 +284,10 @@ describe('WalletController', () => {
       expect(mockRes.status).toHaveBeenCalledWith(202);
       expect(mockWithdrawHandler.execute).toHaveBeenCalledWith({
         userId: 'user-123',
-        phoneNumber: '+22501234567',
-        amountUsdc: 50,
-        targetCurrency: 'XOF',
+        fiatAmount: 50,
+        fiatCurrency: 'EUR',
+        country: 'US',
+        paymentMethod: 'ACH_BANK_ACCOUNT',
       });
     });
   });

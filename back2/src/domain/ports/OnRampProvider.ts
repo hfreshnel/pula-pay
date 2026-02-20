@@ -2,35 +2,61 @@ import { Currency, OnRampProvider as Provider } from '@prisma/client';
 
 export interface InitiateDepositParams {
   userId: string;
-  phoneNumber: string;
   amount: number; // In fiat currency
   currency: Currency;
   idempotencyKey: string;
   callbackUrl: string;
+  // Phone-based providers (MoMo):
+  phoneNumber?: string;
+  // Redirect-based providers (Coinbase):
+  walletAddress?: string;
+  blockchain?: string;
+  country?: string;
+  paymentMethod?: string;
 }
 
 export interface DepositResult {
   providerRef: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
-  paymentUrl?: string; // For redirect if needed
+  paymentUrl?: string; // For redirect-based providers (Coinbase widget URL)
+  quoteId?: string;
+  fees?: {
+    coinbaseFee?: string;
+    networkFee?: string;
+    paymentTotal?: string;
+  };
 }
 
 export interface InitiatePayoutParams {
   userId: string;
-  phoneNumber: string;
   amount: number;
   currency: Currency;
   idempotencyKey: string;
+  // Phone-based providers (MoMo):
+  phoneNumber?: string;
+  // Redirect-based providers (Coinbase):
+  walletAddress?: string;
+  blockchain?: string;
+  country?: string;
+  paymentMethod?: string;
+  cashoutCurrency?: Currency;
+  redirectUrl?: string;
 }
 
 export interface PayoutResult {
   providerRef: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
+  paymentUrl?: string; // For redirect-based providers (Coinbase offramp URL)
+  quoteId?: string;
+  fees?: {
+    coinbaseFee?: string;
+    cashoutTotal?: string;
+  };
 }
 
 /**
  * Port for fiat on/off-ramp providers
- * Implemented by MomoOnRampAdapter, OrangeMoneyAdapter, etc.
+ * Implemented by CoinbaseCdpOnRampAdapter, etc.
  */
 export interface OnRampProvider {
   readonly providerCode: Provider;

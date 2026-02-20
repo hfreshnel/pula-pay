@@ -211,11 +211,12 @@ model OnRampTransaction {
 
 enum OnRampProvider {
   MTN_MOMO
+  COINBASE_CDP
   MOOV_MONEY
   CELTIIS
-  ORANGE_MONEY   // Futur
-  WAVE           // Futur
-  BANK_TRANSFER  // Futur
+  ORANGE_MONEY
+  WAVE
+  BANK_TRANSFER
 }
 
 // ============================================

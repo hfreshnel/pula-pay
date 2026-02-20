@@ -5,11 +5,20 @@ import { ActivateWalletHandler } from '../../../application/commands/ActivateWal
 import { OnRampProvider } from '../../../domain/ports/OnRampProvider';
 import { logger } from '../../../shared/utils/logger';
 
-interface MomoWebhookPayload {
-  referenceId: string;
-  status: 'SUCCESSFUL' | 'FAILED' | 'PENDING';
-  financialTransactionId?: string;
-  reason?: string;
+interface CoinbaseCdpWebhookPayload {
+  event_type:
+    | 'onramp.transaction.created'
+    | 'onramp.transaction.updated'
+    | 'onramp.transaction.success'
+    | 'onramp.transaction.failed'
+    | 'offramp.transaction.created'
+    | 'offramp.transaction.updated'
+    | 'offramp.transaction.success'
+    | 'offramp.transaction.failed';
+  transaction_id: string;
+  partner_user_id: string;
+  status: string;
+  metadata?: Record<string, unknown>;
 }
 
 interface CircleWebhookPayload {
@@ -30,28 +39,28 @@ export class WebhookController {
   constructor(
     private readonly confirmDepositHandler: ConfirmDepositHandler,
     private readonly activateWalletHandler: ActivateWalletHandler,
-    private readonly momoProvider: OnRampProvider
+    private readonly coinbaseCdpProvider: OnRampProvider
   ) {}
 
-  handleMomoWebhook = async (
+  handleCoinbaseCdpWebhook = async (
     req: Request,
     res: Response<ApiResponse>,
     _next: NextFunction
   ): Promise<void> => {
     try {
       // Validate webhook
-      const isValid = this.momoProvider.validateWebhook(
+      const isValid = this.coinbaseCdpProvider.validateWebhook(
         req.headers as Record<string, string>,
         req.body
       );
 
       if (!isValid) {
-        logger.warn({ headers: req.headers }, 'Invalid MoMo webhook signature');
+        logger.warn({ headers: req.headers }, 'Invalid Coinbase CDP webhook payload');
         res.status(401).json({
           success: false,
           error: {
-            code: 'INVALID_SIGNATURE',
-            message: 'Invalid webhook signature',
+            code: 'INVALID_WEBHOOK',
+            message: 'Invalid webhook payload',
           },
           meta: {
             requestId: req.headers['x-request-id'] as string,
@@ -61,21 +70,22 @@ export class WebhookController {
         return;
       }
 
-      const payload = req.body as MomoWebhookPayload;
+      const payload = req.body as CoinbaseCdpWebhookPayload;
 
       logger.info(
-        { referenceId: payload.referenceId, status: payload.status },
-        'MoMo webhook received'
+        { eventType: payload.event_type, transactionId: payload.transaction_id },
+        'Coinbase CDP webhook received'
       );
 
-      // Process based on status
-      if (payload.status === 'SUCCESSFUL' || payload.status === 'FAILED') {
+      // Process terminal status events
+      if (payload.event_type.endsWith('.success') || payload.event_type.endsWith('.failed')) {
         await this.confirmDepositHandler.execute({
-          providerRef: payload.referenceId,
-          providerStatus: payload.status === 'SUCCESSFUL' ? 'success' : 'failed',
+          providerRef: payload.transaction_id,
+          providerStatus: payload.event_type.endsWith('.success') ? 'success' : 'failed',
           metadata: {
-            financialTransactionId: payload.financialTransactionId,
-            reason: payload.reason,
+            partnerUserId: payload.partner_user_id,
+            coinbaseStatus: payload.status,
+            ...payload.metadata,
           },
         });
       }
@@ -89,7 +99,7 @@ export class WebhookController {
         },
       });
     } catch (error) {
-      logger.error({ error }, 'Error processing MoMo webhook');
+      logger.error({ error }, 'Error processing Coinbase CDP webhook');
       // Still return 200 to prevent retries for unrecoverable errors
       res.status(200).json({
         success: true,
@@ -123,7 +133,6 @@ export class WebhookController {
         case 'transactions.outbound':
         case 'transactions.inbound':
           // Handle transaction state changes
-          // TODO: Implement transaction confirmation logic
           break;
 
         case 'wallets':
@@ -177,7 +186,6 @@ export class WebhookController {
           { error, circleWalletId: walletId },
           'Failed to activate wallet from webhook'
         );
-        // Don't throw - we've logged the error and will return 200
       }
     } else {
       logger.debug(

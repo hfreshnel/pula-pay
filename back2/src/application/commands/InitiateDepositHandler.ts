@@ -12,10 +12,11 @@ import { logger } from '../../shared/utils/logger';
 
 export interface InitiateDepositCommand {
   userId: string;
-  phoneNumber: string;
   fiatAmount: number;
   fiatCurrency: Currency;
   idempotencyKey?: string;
+  country?: string;
+  paymentMethod?: string;
 }
 
 export interface InitiateDepositResult {
@@ -25,6 +26,12 @@ export interface InitiateDepositResult {
   amountUsdc: string;
   displayAmount: string;
   displayCurrency: Currency;
+  paymentUrl?: string;
+  fees?: {
+    coinbaseFee?: string;
+    networkFee?: string;
+    paymentTotal?: string;
+  };
 }
 
 export class InitiateDepositHandler {
@@ -68,14 +75,17 @@ export class InitiateDepositHandler {
       walletId: wallet.id,
     });
 
-    // 5. Initiate MoMo collection
+    // 5. Initiate deposit via provider (Coinbase CDP)
     const depositResult = await this.onRampProvider.initiateDeposit({
       userId: command.userId,
-      phoneNumber: command.phoneNumber,
       amount: command.fiatAmount,
       currency: command.fiatCurrency,
       idempotencyKey,
-      callbackUrl: config.momo.callbackUrl ?? `${config.apiUrl}/webhooks/momo`,
+      callbackUrl: `${config.apiUrl}/webhooks/coinbase-cdp`,
+      walletAddress: wallet.address,
+      blockchain: wallet.blockchain,
+      country: command.country ?? config.coinbase.defaultCountry,
+      paymentMethod: command.paymentMethod ?? 'CARD',
     });
 
     // 6. Create OnRampTransaction
@@ -89,6 +99,8 @@ export class InitiateDepositHandler {
     });
 
     // 7. Update status → PROCESSING
+    // Store composite providerRef (userId:quoteId) for polling
+    const compositeRef = `${command.userId}:${depositResult.providerRef}`;
     transaction.markProcessing(depositResult.providerRef);
     await this.txRepo.update(transaction);
 
@@ -97,6 +109,7 @@ export class InitiateDepositHandler {
         transactionId: transaction.id,
         providerRef: depositResult.providerRef,
         amountUsdc: amountUsdc.toString(),
+        paymentUrl: depositResult.paymentUrl,
       },
       'Deposit initiated'
     );
@@ -104,14 +117,14 @@ export class InitiateDepositHandler {
     // 8. Start background polling as fallback for callbacks
     if (this.onRampProvider.startDepositPolling) {
       this.onRampProvider.startDepositPolling(
-        depositResult.providerRef,
+        compositeRef,
         async (pollResult) => {
           await this.handlePollingResult(transaction.id, pollResult);
         }
       );
     }
 
-    return this.toResult(transaction, depositResult.providerRef);
+    return this.toResult(transaction, depositResult.providerRef, depositResult.paymentUrl, depositResult.fees);
   }
 
   private async handlePollingResult(
@@ -149,14 +162,21 @@ export class InitiateDepositHandler {
     }
   }
 
-  private toResult(tx: Transaction, providerRef?: string): InitiateDepositResult {
+  private toResult(
+    tx: Transaction,
+    providerRef?: string,
+    paymentUrl?: string,
+    fees?: { coinbaseFee?: string; networkFee?: string; paymentTotal?: string }
+  ): InitiateDepositResult {
     return {
       transactionId: tx.id,
       providerRef: providerRef ?? tx.externalRef ?? '',
       status: tx.status,
       amountUsdc: tx.amountUsdc.toString(),
       displayAmount: tx.displayAmount?.toString() ?? '0',
-      displayCurrency: tx.displayCurrency ?? 'XOF',
+      displayCurrency: tx.displayCurrency ?? 'USD',
+      paymentUrl,
+      fees,
     };
   }
 }

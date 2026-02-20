@@ -26,6 +26,8 @@ import { GetTransactionByIdHandler } from '../../../application/queries/GetTrans
 import { GetExchangeRateHandler } from '../../../application/queries/GetExchangeRateHandler';
 import { GetWalletAddressHandler } from '../../../application/queries/GetWalletAddressHandler';
 import { ResolveRecipientHandler } from '../../../application/queries/ResolveRecipientHandler';
+import { GetOnrampQuoteHandler } from '../../../application/queries/GetOnrampQuoteHandler';
+import { GetOfframpQuoteHandler } from '../../../application/queries/GetOfframpQuoteHandler';
 import { CurrencyConversionService } from '../../../application/services/CurrencyConversionService';
 
 // Repositories
@@ -35,7 +37,7 @@ import { PrismaTransactionRepository } from '../../persistence/repositories/Pris
 
 // Adapters
 import { CircleWalletAdapter } from '../../adapters/circle/CircleWalletAdapter';
-import { MomoOnRampAdapter } from '../../adapters/momo/MomoOnRampAdapter';
+import { CoinbaseCdpOnRampAdapter } from '../../adapters/coinbase-cdp/CoinbaseCdpOnRampAdapter';
 import { CoingeckoAdapter } from '../../adapters/exchange/CoingeckoAdapter';
 import { CachedExchangeRateAdapter } from '../../adapters/exchange/CachedExchangeRateAdapter';
 
@@ -49,14 +51,14 @@ export function createRouter(prisma: PrismaClient): Router {
 
   // Initialize adapters
   const circleAdapter = new CircleWalletAdapter();
-  const momoAdapter = new MomoOnRampAdapter();
+  const coinbaseCdpAdapter = new CoinbaseCdpOnRampAdapter();
   const coingeckoAdapter = new CoingeckoAdapter();
   const exchangeRateAdapter = new CachedExchangeRateAdapter(coingeckoAdapter, prisma);
 
   // Initialize handlers
   const createWalletHandler = new CreateWalletHandler(userRepo, walletRepo, circleAdapter);
-  const depositHandler = new InitiateDepositHandler(walletRepo, txRepo, momoAdapter, exchangeRateAdapter);
-  const withdrawHandler = new InitiateWithdrawalHandler(walletRepo, txRepo, momoAdapter, exchangeRateAdapter);
+  const depositHandler = new InitiateDepositHandler(walletRepo, txRepo, coinbaseCdpAdapter, exchangeRateAdapter);
+  const withdrawHandler = new InitiateWithdrawalHandler(walletRepo, txRepo, coinbaseCdpAdapter, exchangeRateAdapter);
   const transferHandler = new ExecuteTransferHandler( prisma, walletRepo, txRepo, circleAdapter, exchangeRateAdapter);
   const simpleTransferHandler = new ExecuteSimpleTransferHandler(prisma, walletRepo, txRepo, exchangeRateAdapter);
   const confirmDepositHandler = new ConfirmDepositHandler(prisma, txRepo, walletRepo);
@@ -68,12 +70,14 @@ export function createRouter(prisma: PrismaClient): Router {
   const addressHandler = new GetWalletAddressHandler(walletRepo);
   const rateHandler = new GetExchangeRateHandler(exchangeRateAdapter);
   const resolveRecipientHandler = new ResolveRecipientHandler(userRepo, walletRepo);
+  const onrampQuoteHandler = new GetOnrampQuoteHandler(coinbaseCdpAdapter);
+  const offrampQuoteHandler = new GetOfframpQuoteHandler(coinbaseCdpAdapter);
   const conversionService = new CurrencyConversionService(exchangeRateAdapter);
 
   // Initialize controllers
   const authController = new AuthController(userRepo);
-  const walletController = new WalletController(createWalletHandler, depositHandler, withdrawHandler, transferHandler, simpleTransferHandler, syncWalletStatusHandler, balanceHandler, historyHandler, transactionByIdHandler, addressHandler, resolveRecipientHandler);
-  const webhookController = new WebhookController(confirmDepositHandler, activateWalletHandler, momoAdapter);
+  const walletController = new WalletController(createWalletHandler, depositHandler, withdrawHandler, transferHandler, simpleTransferHandler, syncWalletStatusHandler, balanceHandler, historyHandler, transactionByIdHandler, addressHandler, resolveRecipientHandler, onrampQuoteHandler, offrampQuoteHandler);
+  const webhookController = new WebhookController(confirmDepositHandler, activateWalletHandler, coinbaseCdpAdapter);
   const rateController = new ExchangeRateController(rateHandler, conversionService);
   const healthController = new HealthController(prisma);
 
@@ -98,7 +102,7 @@ export function createRouter(prisma: PrismaClient): Router {
   router.get('/exchange-rates/preview', rateController.getConversionPreview);
 
   // Webhook routes (no auth, validated internally)
-  router.post('/webhooks/momo', webhookController.handleMomoWebhook);
+  router.post('/webhooks/coinbase-cdp', webhookController.handleCoinbaseCdpWebhook);
   router.post('/webhooks/circle', webhookController.handleCircleWebhook);
 
   // Protected wallet routes
@@ -113,6 +117,8 @@ export function createRouter(prisma: PrismaClient): Router {
   router.get('/wallet/transactions/:txId', authMiddleware, walletController.getTransaction);
   router.get('/wallet/transactions', authMiddleware, walletController.getTransactionHistory);
   router.get('/wallet/resolve-recipient', authMiddleware, walletController.resolveRecipient);
+  router.get('/wallet/onramp-quote', authMiddleware, walletController.getOnrampQuote);
+  router.get('/wallet/offramp-quote', authMiddleware, walletController.getOfframpQuote);
 
   return router;
 }

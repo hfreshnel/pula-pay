@@ -465,8 +465,8 @@
  * @swagger
  * /wallet/deposit:
  *   post:
- *     summary: Initiate a deposit
- *     description: Initiate a mobile money deposit to convert fiat to USDC
+ *     summary: Initiate a deposit (onramp)
+ *     description: Initiate a Coinbase deposit to convert fiat to USDC. Returns a paymentUrl that the mobile app should open in a WebView for the user to complete the purchase on Coinbase.
  *     tags: [Wallet]
  *     security:
  *       - bearerAuth: []
@@ -478,7 +478,7 @@
  *             $ref: '#/components/schemas/DepositRequest'
  *     responses:
  *       202:
- *         description: Deposit initiated - awaiting mobile money confirmation
+ *         description: Deposit initiated - open paymentUrl in WebView
  *         content:
  *           application/json:
  *             schema:
@@ -498,8 +498,8 @@
  * @swagger
  * /wallet/withdraw:
  *   post:
- *     summary: Initiate a withdrawal
- *     description: Initiate a withdrawal to convert USDC back to mobile money
+ *     summary: Initiate a withdrawal (offramp)
+ *     description: Initiate a Coinbase withdrawal to convert USDC to fiat. Returns a paymentUrl that the mobile app should open in a WebView for the user to complete the sale on Coinbase.
  *     tags: [Wallet]
  *     security:
  *       - bearerAuth: []
@@ -511,7 +511,7 @@
  *             $ref: '#/components/schemas/WithdrawRequest'
  *     responses:
  *       202:
- *         description: Withdrawal initiated
+ *         description: Withdrawal initiated - open paymentUrl in WebView
  *         content:
  *           application/json:
  *             schema:
@@ -523,6 +523,108 @@
  *                       $ref: '#/components/schemas/WithdrawResponse'
  *       400:
  *         description: Invalid request / Insufficient funds
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /wallet/onramp-quote:
+ *   get:
+ *     summary: Get onramp fee quote
+ *     description: Preview the fees and USDC amount for a fiat-to-USDC deposit before committing
+ *     tags: [Wallet]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: amount
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: Fiat amount to deposit
+ *         example: 100
+ *       - in: query
+ *         name: currency
+ *         required: true
+ *         schema:
+ *           $ref: '#/components/schemas/Currency'
+ *         description: Fiat currency (USD or EUR)
+ *       - in: query
+ *         name: country
+ *         schema:
+ *           type: string
+ *           default: US
+ *         description: ISO 3166-1 country code
+ *       - in: query
+ *         name: paymentMethod
+ *         schema:
+ *           type: string
+ *           enum: [CARD, ACH_BANK_ACCOUNT, APPLE_PAY]
+ *           default: CARD
+ *     responses:
+ *       200:
+ *         description: Onramp fee quote
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/OnrampQuoteResponse'
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /wallet/offramp-quote:
+ *   get:
+ *     summary: Get offramp fee quote
+ *     description: Preview the fees and fiat amount for a USDC-to-fiat withdrawal before committing
+ *     tags: [Wallet]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: sellAmount
+ *         required: true
+ *         schema:
+ *           type: number
+ *         description: USDC amount to sell
+ *         example: 50
+ *       - in: query
+ *         name: cashoutCurrency
+ *         required: true
+ *         schema:
+ *           $ref: '#/components/schemas/Currency'
+ *         description: Fiat cashout currency (USD or EUR)
+ *       - in: query
+ *         name: country
+ *         schema:
+ *           type: string
+ *           default: US
+ *         description: ISO 3166-1 country code
+ *       - in: query
+ *         name: paymentMethod
+ *         schema:
+ *           type: string
+ *           enum: [ACH_BANK_ACCOUNT, CARD]
+ *           default: ACH_BANK_ACCOUNT
+ *     responses:
+ *       200:
+ *         description: Offramp fee quote
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/ApiResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       $ref: '#/components/schemas/OfframpQuoteResponse'
  *       401:
  *         description: Unauthorized
  */
@@ -641,10 +743,10 @@
 
 /**
  * @swagger
- * /webhooks/momo:
+ * /webhooks/coinbase-cdp:
  *   post:
- *     summary: MoMo webhook handler
- *     description: Receives webhook notifications from Mobile Money providers
+ *     summary: Coinbase CDP webhook handler
+ *     description: Receives webhook notifications from Coinbase CDP for onramp/offramp transaction events
  *     tags: [Webhooks]
  *     requestBody:
  *       required: true
@@ -653,20 +755,22 @@
  *           schema:
  *             type: object
  *             properties:
- *               referenceId:
+ *               event_type:
+ *                 type: string
+ *                 enum: [onramp.transaction.success, onramp.transaction.failed, offramp.transaction.success, offramp.transaction.failed]
+ *               transaction_id:
+ *                 type: string
+ *               partner_user_id:
  *                 type: string
  *               status:
  *                 type: string
- *                 enum: [SUCCESSFUL, FAILED, PENDING]
- *               financialTransactionId:
- *                 type: string
- *               reason:
- *                 type: string
+ *               metadata:
+ *                 type: object
  *     responses:
  *       200:
  *         description: Webhook processed
  *       401:
- *         description: Invalid webhook signature
+ *         description: Invalid webhook payload
  */
 
 /**
