@@ -36,7 +36,7 @@ export default function CoinbaseWebView({ paymentUrl, visible, redirectUrl, onCl
     };
 
     return (
-        <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+        <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
             <View style={styles.container}>
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>{t('deposit.completingPayment')}</Text>
