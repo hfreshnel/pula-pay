@@ -19,11 +19,11 @@ export type UserDTO = {
 // === WALLET ===
 export type WalletDTO = {
     id: string;
-    userId: string;
+    userId?: string;
     address: string;
     blockchain: Blockchain;
     status: WalletStatus;
-    createdAt: string;
+    createdAt?: string;
 };
 
 export type Blockchain =

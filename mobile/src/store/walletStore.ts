@@ -19,6 +19,9 @@ import { getApiError } from "@/src/utils/api-error";
 import type { TxStatus, DisplayCurrency, ExchangeRateDTO } from "@/src/api/types";
 import type { WalletState } from "./types";
 
+const MAX_POLL_ATTEMPTS = 150;
+let isFetchingBalance = false;
+
 const CURRENCY_DECIMALS: Record<string, number> = {
     EUR: 2,
     XOF: 0,
@@ -74,6 +77,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
     // Fetch balance with USDC conversion
     fetchBalance: async () => {
+        if (!get().wallet || isFetchingBalance) return;
+        isFetchingBalance = true;
         set({ loading: true, error: null });
         try {
             const data = await getMyBalance(get().displayCurrency);
@@ -86,6 +91,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
             set({ error: "Impossible de récupérer le solde" });
         } finally {
             set({ loading: false });
+            isFetchingBalance = false;
         }
     },
 
@@ -234,10 +240,16 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     // Track transaction status — polls every 2s until terminal, then refreshes balance/history
     trackTransaction: async (txId: string): Promise<TxStatus> => {
         let status: TxStatus = "PENDING";
+        let attempts = 0;
 
-        while (status === "PENDING" || status === "PROCESSING") {
+        while ((status === "PENDING" || status === "PROCESSING") && attempts < MAX_POLL_ATTEMPTS) {
             await new Promise((r) => setTimeout(r, 2000));
-            status = await getTxStatus(txId);
+            try {
+                status = await getTxStatus(txId);
+            } catch {
+                // transient network error — keep polling
+            }
+            attempts++;
         }
 
         await Promise.all([
@@ -245,7 +257,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
             get().fetchTransactions(),
         ]);
 
-        return status;
+        return attempts >= MAX_POLL_ATTEMPTS ? "FAILED" : status;
     },
 
     // Reset store

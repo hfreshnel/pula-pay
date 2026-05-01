@@ -40,8 +40,7 @@ type SubmittedTx = {
     fees?: WithdrawResponse['fees'];
 };
 
-const generateIdempotencyKey = () =>
-    `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+const generateIdempotencyKey = () => crypto.randomUUID();
 
 // The backend sets redirectUrl = ${API_URL}/onramp-complete for the offramp widget.
 const OFFRAMP_REDIRECT_URL = `${process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000'}/onramp-complete`;
@@ -59,7 +58,7 @@ export default function Withdraw() {
     const [submittedTx, setSubmittedTx] = useState<SubmittedTx | null>(null);
 
     const { user } = useAuth();
-    const { withdraw, loading, error, displayCurrency, balanceUsdc, syncWalletStatus, trackTransaction } = useWalletStore();
+    const { withdraw, loading, displayCurrency, balanceUsdc, syncWalletStatus, trackTransaction } = useWalletStore();
     const { toUsdc, toDisplay, rate, loading: rateLoading, refresh: refreshRate } = useConversion(displayCurrency);
 
     const formatAmount = (value: string) => {
@@ -136,7 +135,13 @@ export default function Withdraw() {
         }
     };
 
-    const handleWebViewClose = () => {
+    const handleWebViewAbort = () => {
+        setPaymentUrl(null);
+        setTxPhase('idle');
+        setSubmittedTx(null);
+    };
+
+    const handleWebViewSuccess = () => {
         setPaymentUrl(null);
         if (submittedTx) {
             startPolling(submittedTx.txId);
@@ -152,8 +157,8 @@ export default function Withdraw() {
                 paymentUrl={paymentUrl}
                 visible
                 redirectUrl={OFFRAMP_REDIRECT_URL}
-                onClose={handleWebViewClose}
-                onSuccess={handleWebViewClose}
+                onClose={handleWebViewAbort}
+                onSuccess={handleWebViewSuccess}
             />
         );
     }
@@ -296,7 +301,6 @@ export default function Withdraw() {
                 />
 
                 {loading && <ActivityIndicator style={styles.loader} color={theme.colors.primary} />}
-                {error && <Text style={styles.error}>{error}</Text>}
             </ScrollView>
         </Screen>
     );

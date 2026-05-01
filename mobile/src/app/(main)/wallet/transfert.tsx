@@ -41,7 +41,7 @@ export default function Transfer() {
 
     const { recipientId, errorKey: recipientErrorKey, getPhoneUserId } = useRecipientId();
     const { user } = useAuth();
-    const { transfer, loading, error, displayCurrency, balanceUsdc, syncWalletStatus } = useWalletStore();
+    const { transfer, loading, displayCurrency, balanceUsdc, syncWalletStatus } = useWalletStore();
     const { toUsdc, toDisplay, rate, loading: rateLoading, refresh: refreshRate } = useConversion(displayCurrency);
 
     const formatAmount = (value: string) => {
@@ -223,7 +223,6 @@ export default function Transfer() {
                 />
 
                 {loading && <ActivityIndicator style={styles.loader} color={theme.colors.primary} />}
-                {error && <Text style={styles.error}>{error}</Text>}
             </ScrollView>
         </Screen>
         </>

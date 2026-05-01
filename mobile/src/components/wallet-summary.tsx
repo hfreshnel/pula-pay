@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Eye, EyeOff, RotateCw, Plus, ArrowUpRight, ArrowDownRight, AlertCircle } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
 import Svg, { Defs, RadialGradient, Stop, Ellipse, Pattern, Rect, Line } from "react-native-svg";
@@ -87,7 +87,9 @@ export default function WalletSummary() {
         await Promise.all(calls);
     };
 
-    useEffect(() => { refresh(); }, []);
+    useFocusEffect(
+        useCallback(() => { refresh(); }, [fetchWallet, fetchBalance, reconcileBalance])
+    );
 
     const handleCreateWallet = async () => {
         setCreatingWallet(true);
@@ -115,10 +117,6 @@ export default function WalletSummary() {
                 <LinearGradient colors={gradientColors} start={[0, 0]} end={[0, 1]} style={StyleSheet.absoluteFillObject} />
                 <GlowOverlay primaryColor={theme.colors.primary} successBase={theme.colors.success} />
                 <View style={s.heroInner}>
-                    <View style={s.notFoundRow}>
-                        <AlertCircle color={theme.colors.primary} size={SIZES.iconMd} />
-                        <Text style={s.balanceLabel}>{t("wallet.notFound")}</Text>
-                    </View>
                     <Text style={s.balance}>{t("wallet.createWalletPrompt")}</Text>
                     <View style={s.actions}>
                         <TouchableOpacity

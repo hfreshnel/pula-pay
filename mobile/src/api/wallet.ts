@@ -3,6 +3,8 @@ import { authClient } from "../lib/auth";
 import {
     BalanceDTO,
     WalletDTO,
+    type Blockchain,
+    type WalletStatus,
     ExchangeRateDTO,
     DisplayCurrency,
     DepositRequest,
@@ -34,15 +36,13 @@ export async function getMyWallet(): Promise<WalletDTO> {
     const addr = await getWalletAddress();
     return {
         id: addr.walletId,
-        userId: "",
         address: addr.address,
-        blockchain: addr.blockchain as any,
-        status: addr.status as any,
-        createdAt: "",
+        blockchain: addr.blockchain,
+        status: addr.status,
     };
 }
 
-export async function getWalletAddress(): Promise<{ walletId: string; address: string; blockchain: string; status: string }> {
+export async function getWalletAddress(): Promise<{ walletId: string; address: string; blockchain: Blockchain; status: WalletStatus }> {
     const { data } = await client.get("/wallet/address");
     return data.data;
 }
