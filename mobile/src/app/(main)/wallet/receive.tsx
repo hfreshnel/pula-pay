@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { router } from 'expo-router';
-import { ArrowLeft, Copy, AlertTriangle } from 'lucide-react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { ArrowLeft, Copy, AlertTriangle, Clock } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 
 import { useWalletAddress } from '@/src/hooks/use-wallet-address';
@@ -23,7 +23,8 @@ export default function Receive() {
     const s = useStyles(getStyles);
     const { address, blockchain, loading, copyToClipboard, copied } = useWalletAddress();
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState<Tab>('qr');
+    const { tab } = useLocalSearchParams<{ tab?: Tab }>();
+    const [activeTab, setActiveTab] = useState<Tab>(tab ?? 'qr');
 
     const username = user?.name?.toLowerCase().replace(/\s+/g, '') ?? 'utilisateur';
     const payLink = `pay.pulapay.com/${username}`;
@@ -105,6 +106,12 @@ export default function Receive() {
                         <Text style={s.infoText}>
                             Partagez ce lien pour recevoir des paiements directement sur votre compte Pulapay.
                         </Text>
+                        <View style={s.comingSoonBox}>
+                            <Clock size={SIZES.iconSm} color={theme.colors.textMuted} />
+                            <Text style={s.comingSoonText}>
+                                Cette fonctionnalité n'est pas encore disponible. Elle arrive très bientôt - merci de votre patience !
+                            </Text>
+                        </View>
                     </View>
                 )}
 
@@ -205,7 +212,7 @@ const getStyles = (theme: Theme) => StyleSheet.create({
     },
     linkText: {
         fontFamily: FONTS.sans,
-        fontSize: theme.typography.body.fontSize + 1,
+        fontSize: theme.typography.body.fontSize! + 1,
         letterSpacing: -0.2,
         color: theme.colors.text,
     },
@@ -246,5 +253,22 @@ const getStyles = (theme: Theme) => StyleSheet.create({
         fontSize: theme.typography.caption.fontSize! + 1,
         lineHeight: theme.typography.caption.lineHeight! + 2,
         color: theme.colors.warning,
+    },
+    comingSoonBox: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: theme.spacing.s + 2,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderRadius: theme.borderRadius.m,
+        backgroundColor: theme.colors.surfaceAlt,
+        padding: theme.spacing.m - 2,
+    },
+    comingSoonText: {
+        fontFamily: FONTS.sans,
+        flex: 1,
+        fontSize: theme.typography.caption.fontSize! + 1,
+        lineHeight: theme.typography.caption.lineHeight! + 2,
+        color: theme.colors.textMuted,
     },
 });
