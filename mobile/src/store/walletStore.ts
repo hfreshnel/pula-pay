@@ -97,6 +97,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
     // Fetch transactions
     fetchTransactions: async () => {
+        if (!get().wallet) return;
         set({ loading: true, error: null });
         try {
             const txs = await getMyTransactions();
