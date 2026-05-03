@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { logger } from "../utils/logger";
+import { captureException } from "../lib/error-reporting";
 
 type State = {
     hasError: boolean;
@@ -25,12 +26,17 @@ export default class ErrorBoundary extends React.Component<any, State> {
     }
 
     componentDidCatch(error: any, errorInfo: any) {
-        // Save error details to state and log
         this.setState({ errorInfo });
         logger.error('APP', 'Unhandled error caught by ErrorBoundary', {
             error: error?.message ?? String(error),
             stack: error?.stack,
             componentStack: errorInfo?.componentStack,
+        });
+        // Capture the original Error object directly so Sentry gets the real
+        // JS stack trace (the logger handler only forwards the message string).
+        captureException(error, {
+            category: 'APP',
+            extra: { componentStack: errorInfo?.componentStack },
         });
     }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { View, Text, TextInput, ActivityIndicator, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
@@ -15,6 +15,11 @@ import Screen from '@/src/components/screen';
 import Button from '@/src/components/ui/button';
 import ExchangeRateIndicator from '@/src/components/exchange-rate';
 import CoinbaseWebView from '@/src/components/coinbase-webview';
+import {
+    trackDepositInitiated,
+    trackDepositCompleted,
+    trackDepositFailed,
+} from '@/src/lib/tracking';
 import type { Theme } from '@/src/theme/types';
 import type { PaymentMethod, TxStatus, DepositResponse } from '@/src/api/types';
 
@@ -55,6 +60,7 @@ export default function Deposit() {
     const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
     const [txPhase, setTxPhase] = useState<TxPhase>('idle');
     const [submittedTx, setSubmittedTx] = useState<SubmittedTx | null>(null);
+    const txStartTimeRef = useRef<number>(0);
 
     const { user } = useAuth();
     const { deposit, loading, displayCurrency, syncWalletStatus, trackTransaction } = useWalletStore();
@@ -78,13 +84,41 @@ export default function Deposit() {
         setSelectedMethod(method);
     };
 
-    const startPolling = (txId: string) => {
+    const startPolling = (txId: string, startTime: number) => {
         setTxPhase('polling');
         trackTransaction(txId)
             .then((status: TxStatus) => {
-                setTxPhase(status === 'COMPLETED' ? 'completed' : 'failed');
+                const durationMs = Date.now() - startTime;
+                if (status === 'COMPLETED') {
+                    setTxPhase('completed');
+                    if (submittedTx) {
+                        trackDepositCompleted({
+                            txId,
+                            amount: parseFloat(submittedTx.amount),
+                            currency: displayCurrency,
+                            method: selectedMethod,
+                            durationMs,
+                        });
+                    }
+                } else {
+                    setTxPhase('failed');
+                    trackDepositFailed({
+                        amount: submittedTx ? parseFloat(submittedTx.amount) : 0,
+                        currency: displayCurrency,
+                        method: selectedMethod,
+                        durationMs,
+                    });
+                }
             })
-            .catch(() => setTxPhase('failed'));
+            .catch(() => {
+                setTxPhase('failed');
+                trackDepositFailed({
+                    amount: submittedTx ? parseFloat(submittedTx.amount) : 0,
+                    currency: displayCurrency,
+                    method: selectedMethod,
+                    durationMs: Date.now() - startTime,
+                });
+            });
     };
 
     const handleSubmit = async () => {
@@ -106,11 +140,18 @@ export default function Deposit() {
                 return;
             }
 
+            txStartTimeRef.current = Date.now();
             const idempotencyKey = generateIdempotencyKey();
             const response = await deposit(
                 { amount: parseFloat(amount), currency: displayCurrency, paymentMethod: selectedMethod },
                 { idempotencyKey }
             );
+
+            trackDepositInitiated({
+                amount: parseFloat(amount),
+                currency: displayCurrency,
+                method: selectedMethod,
+            });
 
             const tx: SubmittedTx = {
                 txId: response.transactionId,
@@ -125,10 +166,17 @@ export default function Deposit() {
                 setPaymentUrl(response.paymentUrl);
                 setTxPhase('webview');
             } else {
-                startPolling(response.transactionId);
+                startPolling(response.transactionId, txStartTimeRef.current);
             }
         } catch (err: unknown) {
             const { code, translationKey, message } = getApiError(err);
+            trackDepositFailed({
+                amount: parseFloat(amount) || 0,
+                currency: displayCurrency,
+                method: selectedMethod,
+                errorCode: code,
+                durationMs: Date.now() - txStartTimeRef.current,
+            });
             toast.error(message || t(translationKey), 6000);
             if (code === 'WALLET_NOT_FOUND') {
                 router.replace('/(main)/dashboard');
@@ -145,7 +193,7 @@ export default function Deposit() {
     const handleWebViewSuccess = () => {
         setPaymentUrl(null);
         if (submittedTx) {
-            startPolling(submittedTx.txId);
+            startPolling(submittedTx.txId, txStartTimeRef.current);
         } else {
             setTxPhase('idle');
         }

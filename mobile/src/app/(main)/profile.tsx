@@ -10,6 +10,7 @@ import { useStyles } from "@/src/hooks/use-styles";
 import { useUIStore } from "@/src/store/uiStore";
 import { useWalletStore } from "@/src/store/walletStore";
 import { FONTS, SIZES } from "@/src/constants/theme";
+import * as Sentry from "@sentry/react-native";
 import type { Theme } from "@/src/theme/types";
 
 function ThemeToggle() {
@@ -223,7 +224,11 @@ export default function Profile() {
                 <View style={s.card}>
                     <Text style={s.sectionTitle}>SUPPORT</Text>
 
-                    <View style={s.menuItem}>
+                    <TouchableOpacity
+                        style={s.menuItem}
+                        onPress={() => Sentry.showFeedbackForm()}
+                        activeOpacity={0.7}
+                    >
                         <View style={s.menuIcon}>
                             <HelpCircle size={SIZES.iconSm} color={theme.colors.text} />
                         </View>
@@ -231,7 +236,7 @@ export default function Profile() {
                             <Text style={s.menuLabel}>Aide</Text>
                         </View>
                         <ChevronRight size={SIZES.iconSm} color={theme.colors.stone} />
-                    </View>
+                    </TouchableOpacity>
 
                     <View style={s.divider} />
 

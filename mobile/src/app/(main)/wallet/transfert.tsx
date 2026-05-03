@@ -5,6 +5,7 @@ import PhoneInput, { ICountry } from '@/src/components/ui/phone-input';
 import { router } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import { executeCircleChallenge } from '@/src/lib/circle';
+import { trackTransferInitiated, trackTransferCompleted, trackTransferFailed } from '@/src/lib/tracking';
 import type { TransferResponse } from '@/src/api/types';
 
 import { useRecipientId } from '@/src/hooks/use-recipient-id';
@@ -84,6 +85,8 @@ export default function Transfer() {
             return;
         }
 
+        let startTime = 0;
+
         try {
             // Check and sync wallet status before attempting transaction
             toast.info(t('transfer.checkingWallet'), 3000);
@@ -98,6 +101,8 @@ export default function Transfer() {
                 return;
             }
 
+            startTime = Date.now();
+
             // Initiate transfer — returns challenge for PIN confirmation
             const response = await transfer({
                 recipientPhone: recipientPhone,
@@ -105,6 +110,8 @@ export default function Transfer() {
                 currency: displayCurrency,
                 description: note || undefined,
             });
+
+            trackTransferInitiated({ amount: parseFloat(amount), currency: displayCurrency });
 
             // Execute Circle SDK challenge natively (PIN confirmation)
             await executeCircleChallenge(response);
@@ -115,11 +122,25 @@ export default function Transfer() {
                 recipientPhone,
                 txId: response.transactionId,
             });
+
+            trackTransferCompleted({
+                txId: response.transactionId,
+                amount: parseFloat(amount),
+                currency: displayCurrency,
+                durationMs: Date.now() - startTime,
+            });
+
             toast.success(t('transfer.success'));
         } catch (err: unknown) {
             const { code, translationKey, message } = getApiError(err);
             const errorMessage = message || t(translationKey);
             toast.error(errorMessage, 6000);
+            trackTransferFailed({
+                amount: parseFloat(amount) || 0,
+                currency: displayCurrency,
+                errorCode: code,
+                durationMs: startTime > 0 ? Date.now() - startTime : 0,
+            });
             if (code === 'WALLET_NOT_FOUND') {
                 router.replace('/(main)/dashboard');
             }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { View, Text, TextInput, ActivityIndicator, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
@@ -15,6 +15,11 @@ import Screen from '@/src/components/screen';
 import Button from '@/src/components/ui/button';
 import ExchangeRateIndicator from '@/src/components/exchange-rate';
 import CoinbaseWebView from '@/src/components/coinbase-webview';
+import {
+    trackWithdrawInitiated,
+    trackWithdrawCompleted,
+    trackWithdrawFailed,
+} from '@/src/lib/tracking';
 import type { Theme } from '@/src/theme/types';
 import type { PaymentMethod, TxStatus, WithdrawResponse } from '@/src/api/types';
 
@@ -56,6 +61,7 @@ export default function Withdraw() {
     const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
     const [txPhase, setTxPhase] = useState<TxPhase>('idle');
     const [submittedTx, setSubmittedTx] = useState<SubmittedTx | null>(null);
+    const txStartTimeRef = useRef<number>(0);
 
     const { user } = useAuth();
     const { withdraw, loading, displayCurrency, balanceUsdc, syncWalletStatus, trackTransaction } = useWalletStore();
@@ -72,13 +78,41 @@ export default function Withdraw() {
     const estimatedUsdc = amount ? toUsdc(amount) : '0';
     const availableDisplay = balanceUsdc ? toDisplay(balanceUsdc) : '—';
 
-    const startPolling = (txId: string) => {
+    const startPolling = (txId: string, startTime: number) => {
         setTxPhase('polling');
         trackTransaction(txId)
             .then((status: TxStatus) => {
-                setTxPhase(status === 'COMPLETED' ? 'completed' : 'failed');
+                const durationMs = Date.now() - startTime;
+                if (status === 'COMPLETED') {
+                    setTxPhase('completed');
+                    if (submittedTx) {
+                        trackWithdrawCompleted({
+                            txId,
+                            amount: parseFloat(submittedTx.amount),
+                            currency: displayCurrency,
+                            method: selectedMethod,
+                            durationMs,
+                        });
+                    }
+                } else {
+                    setTxPhase('failed');
+                    trackWithdrawFailed({
+                        amount: submittedTx ? parseFloat(submittedTx.amount) : 0,
+                        currency: displayCurrency,
+                        method: selectedMethod,
+                        durationMs,
+                    });
+                }
             })
-            .catch(() => setTxPhase('failed'));
+            .catch(() => {
+                setTxPhase('failed');
+                trackWithdrawFailed({
+                    amount: submittedTx ? parseFloat(submittedTx.amount) : 0,
+                    currency: displayCurrency,
+                    method: selectedMethod,
+                    durationMs: Date.now() - startTime,
+                });
+            });
     };
 
     const handleSubmit = async () => {
@@ -105,11 +139,18 @@ export default function Withdraw() {
                 return;
             }
 
+            txStartTimeRef.current = Date.now();
             const idempotencyKey = generateIdempotencyKey();
             const response = await withdraw(
                 { amount: parseFloat(amount), targetCurrency: displayCurrency, paymentMethod: selectedMethod },
                 { idempotencyKey }
             );
+
+            trackWithdrawInitiated({
+                amount: parseFloat(amount),
+                currency: displayCurrency,
+                method: selectedMethod,
+            });
 
             const tx: SubmittedTx = {
                 txId: response.transactionId,
@@ -124,10 +165,17 @@ export default function Withdraw() {
                 setPaymentUrl(response.paymentUrl);
                 setTxPhase('webview');
             } else {
-                startPolling(response.transactionId);
+                startPolling(response.transactionId, txStartTimeRef.current);
             }
         } catch (err: unknown) {
             const { code, translationKey, message } = getApiError(err);
+            trackWithdrawFailed({
+                amount: parseFloat(amount) || 0,
+                currency: displayCurrency,
+                method: selectedMethod,
+                errorCode: code,
+                durationMs: Date.now() - txStartTimeRef.current,
+            });
             toast.error(message || t(translationKey), 6000);
             if (code === 'WALLET_NOT_FOUND') {
                 router.replace('/(main)/dashboard');
@@ -144,7 +192,7 @@ export default function Withdraw() {
     const handleWebViewSuccess = () => {
         setPaymentUrl(null);
         if (submittedTx) {
-            startPolling(submittedTx.txId);
+            startPolling(submittedTx.txId, txStartTimeRef.current);
         } else {
             setTxPhase('idle');
         }

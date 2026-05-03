@@ -4,6 +4,8 @@ import { emailOTPClient, phoneNumberClient } from "better-auth/client/plugins";
 import * as SecureStore from "expo-secure-store";
 import { BASE_URL } from "../constants/config";
 import type { User } from "../store/types";
+import { resetTracking } from "./tracking";
+import { clearSentryUser } from "./error-reporting";
 
 export const authClient = createAuthClient({
     baseURL: BASE_URL,
@@ -61,6 +63,8 @@ export async function logout(): Promise<void> {
     // Lazy import to avoid circular dependency (walletStore → api/client → auth)
     const { useWalletStore } = await import("../store/walletStore");
     useWalletStore.getState().reset();
+    resetTracking();
+    clearSentryUser();
 }
 
 // Storage key used by expoClient (storagePrefix + "_cookie").
