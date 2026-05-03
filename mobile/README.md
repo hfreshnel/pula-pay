@@ -198,7 +198,7 @@ Methods:
   fetchExchangeRates()                    // GET /exchange-rates
   deposit(req, opts?)                     // POST /wallet/deposit (idempotent)
   withdraw(req, opts?)                    // POST /wallet/withdraw (idempotent)
-  transfer(req, opts?)                    // POST /wallet/transferable → TransferResponse (challenge)
+  transfer(req, opts?)                    // POST /wallet/transfer → TransferResponse (challenge)
   initiateWalletSetup(blockchain?)        // POST /wallet → WalletSetupChallenge
   confirmWalletSetup(userToken, chain?)   // POST /wallet/confirm-setup → WalletSetupConfirm
   syncWalletStatus()                      // POST /wallet/sync-status
@@ -206,6 +206,7 @@ Methods:
   convertToDisplay(amountUsdc)            // USDC × rate, formatted with Intl
   convertToUsdc(displayAmount)            // displayAmount / rate, 6 decimals
   setDisplayCurrency(currency)            // Update + re-fetch balance
+  reconcileBalance()                      // POST /wallet/reconcile-balance (fire-and-forget, dev/testing)
   reset()                                 // Clear all data on logout
 ```
 
@@ -274,7 +275,7 @@ GET    /wallet/balance        ?currency=EUR           → BalanceDTO
 GET    /exchange-rates        ?currencies=EUR,XOF     → ExchangeRateDTO[]
 POST   /wallet/deposit        + x-idempotency-key     → DepositResponse
 POST   /wallet/withdraw       + x-idempotency-key     → WithdrawResponse
-POST   /wallet/transferable   + x-idempotency-key     → TransferResponse { transactionId, challengeId, userToken, encryptionKey, appId, ... }
+POST   /wallet/transfer        + x-idempotency-key     → TransferResponse { transactionId, challengeId, userToken, encryptionKey, appId, ... }
 GET    /wallet/transactions                           → TxDTO[]
 GET    /wallet/transactions/:txId                     → TxDTO
 GET    /wallet/resolve-recipient ?phone=              → userId
@@ -290,18 +291,20 @@ PATCH  /users/me/preferences  { displayCurrency }     → void
 
 ```typescript
 // Enums
-DisplayCurrency = "EUR" | "XOF"
-Blockchain      = "BASE_SEPOLIA" | "BASE"
-WalletStatus    = "PENDING" | "ACTIVE" | "FROZEN"
+DisplayCurrency = "EUR" | "XOF" | "USD"
+Blockchain      = "BASE_SEPOLIA" | "BASE" | "POLYGON_AMOY" | "ETH_SEPOLIA"
+                | "ARBITRUM_SEPOLIA" | "POLYGON" | "ARBITRUM" | "ETHEREUM"
+WalletStatus    = "PENDING" | "ACTIVE" | "FROZEN" | "CLOSED"
 TxStatus        = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED" | "CANCELLED" | "EXPIRED"
 TxType          = "DEPOSIT_ONRAMP" | "DEPOSIT_CRYPTO" | "WITHDRAWAL_OFFRAMP" | "WITHDRAWAL_CRYPTO"
                 | "TRANSFER_P2P" | "REFUND" | "FEE"
 TxDirection     = "IN" | "OUT"
-OnRampProvider  = "MTN_MOMO" | "ORANGE_MONEY" | "BANK_TRANSFER" | "CRYPTO"
+PaymentMethod   = "CARD" | "ACH_BANK_ACCOUNT" | "APPLE_PAY"
+OnRampProvider  = "COINBASE_CDP"
 
 // Key DTOs
-UserDTO    = { id, phone, name?, firstName?, email?, isVerified?, displayCurrency, kycLevel? }
-WalletDTO  = { id, userId, address, blockchain, status, createdAt }
+UserDTO    = { id, phoneNumber, name?, email?, phoneNumberVerified?, displayCurrency, kycLevel?, locale? }
+WalletDTO  = { id, userId?, address, blockchain, status, createdAt? }
 BalanceDTO = { balanceUsdc, displayBalance, displayCurrency, exchangeRate, rateTimestamp }
 
 TxDTO = {
@@ -334,11 +337,11 @@ TransferResponse = {
 | `useBalance()`                | `{ balance, loading, error, getBalance() }`                        | Fetches wallet balance                |
 | `useConversion(currency)`     | `{ toDisplay(), toUsdc(), rate, loading, refresh() }`              | USDC ↔ fiat conversion utilities      |
 | `useExchangeRate(currency)`   | `{ rate, loading, convert(), convertToUsdc(), refresh() }`         | Auto-refreshes every 5 minutes        |
-| `useDeposit()`                | `{ txId, status, loading, error, startDeposit() }`                | Polls status every 1.5s after submit  |
-| `useWithdraw()`               | `{ txId, status, loading, error, startWithdraw() }`               | Polls status every 1.5s after submit  |
-| `useTransfert()`              | `{ txId, status, loading, error, startTransfer() }`               | Polls status every 1.5s after submit  |
+| `useDeposit()`                | `{ txId, status, loading, error, startDeposit() }`                | Polls status every 2s after submit  |
+| `useWithdraw()`               | `{ txId, status, loading, error, startWithdraw() }`               | Polls status every 2s after submit  |
+| `useTransfert()`              | `{ txId, status, loading, error, startTransfer() }`               | Polls status every 2s after submit  |
 | `useTransactions()`           | `{ transactions, loading, error, getTransactions() }`             | Fetch full tx list                    |
-| `useRecipientId()`            | `{ recipientId, errorKey, errorCode, getPhoneUserId() }`          | Lookup recipient by phone             |
+| `useRecipientId()`            | `{ recipientId, errorKey, errorCode, getPhoneUserId() }`          | Lookup by phone; sequence counter prevents stale responses |
 | `useWalletAddress()`          | `{ address, truncatedAddress, blockchain, copyToClipboard(), copied }` | Address + copy with 2s feedback  |
 | `usePhoneForm()`              | `{ phone, setPhone, countryCode, setCountryCode, formatPhone() }`  | E.164 phone formatting for forms      |
 | `useTheme()`                  | `Theme`                                                             | Current theme (system/override)       |
@@ -374,27 +377,25 @@ TransferResponse = {
 
 ### Deposit
 
-**Step 1 — Method selection:**
-- Coinbase CDP Onramp (card / bank)
-- Receive Crypto (redirects to /receive)
+**Step 1 — Method selection:** Card, Bank Transfer, Apple Pay, or Receive Crypto (redirects to /receive)
 
-**Step 2 — Amount entry (MTN_MOMO):**
-- Phone pre-filled from user profile
-- Amount input
+**Step 2 — Amount entry:**
+- Amount in display currency
+- USDC equivalent shown live
 - Exchange rate indicator with refresh
 
-**Step 3 — Success:**
-- Method, amount, USDC equivalent, phone, transaction ID
-- "View transactions" button
+**Step 3 — WebView (Coinbase CDP):** Coinbase onramp widget loads in a modal WebView. Closing it aborts; completing it starts polling.
 
-**Flow:** Sync wallet status → validate ACTIVE → `POST /wallet/deposit` → poll status → success
+**Step 4 — Success:** Method, amount, USDC equivalent, fees, transaction ID, "View transactions" button
+
+**Flow:** Sync wallet status → validate ACTIVE → `POST /wallet/deposit` → open Coinbase WebView → `trackTransaction` polling → success / failure
 
 ### Withdraw
 
 **Display:** Available balance (fiat + USDC in parentheses)
-**Fields:** Amount, method (fixed: MTN_MOMO), phone (pre-filled, disabled)
+**Fields:** Amount in display currency, method (Card or Bank Transfer)
 **Validation:** Balance >= estimated USDC amount
-**Flow:** Sync wallet → `POST /wallet/withdraw` → poll → success
+**Flow:** Sync wallet → validate ACTIVE → `POST /wallet/withdraw` → open Coinbase offramp WebView → `trackTransaction` polling → success / failure
 
 ### Transfer
 
@@ -403,7 +404,7 @@ TransferResponse = {
 **Validation:** Recipient found, sufficient balance
 **Flow:**
 1. Sync wallet status → validate ACTIVE
-2. `POST /wallet/transferable` → returns `TransferResponse` (challenge data)
+2. `POST /wallet/transfer` → returns `TransferResponse` (challenge data)
 3. `executeCircleChallenge()` runs — Circle native SDK presents PIN confirmation UI
 4. On PIN success: display transaction confirmation (amount, recipient, tx ID)
 5. "View transactions" link
@@ -618,7 +619,7 @@ Use your local network IP for device testing (not `localhost`).
 
 - **Circle Challenge Flow** — Wallet setup and transfers are two-step operations: backend initiates and returns a `challengeId`, mobile resolves via `executeCircleChallenge()` in `src/lib/circle.ts` using the native Circle SDK. The SDK is initialized lazily with the `appId` returned by the backend.
 - **User-Controlled wallets** — Users hold their own private keys secured by a PIN. The official `@circle-fin/w3s-pw-react-native-sdk` is used directly (no WebView wrapper needed).
-- **Wallet recovery** — On `WALLET_NOT_FOUND`, `fetchBalance()` checks `GET /wallet/circle-wallets`; if a LIVE wallet exists in Circle, it auto-recovers by calling `confirm-setup` before showing the create-wallet prompt.
+- **Wallet recovery** — On `WALLET_NOT_FOUND`, `fetchWallet()` checks `GET /wallet/circle-wallets`; if a LIVE wallet exists in Circle, it auto-recovers by calling `confirm-setup` before showing the create-wallet prompt.
 - **Idempotency** — All transaction requests include `x-idempotency-key` header to prevent duplicates on retry
 - **Better Auth session** — Session managed by `expoClient` plugin; token stored in SecureStore and sent as `Authorization: Bearer` on every API request
 - **Wallet sync before operations** — Every deposit/withdraw/transfer syncs wallet status with Circle first
