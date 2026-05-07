@@ -63,7 +63,9 @@ export async function syncWalletStatus(): Promise<SyncWalletStatusResponse> {
  * Initiates wallet setup for user-controlled wallets.
  * Returns challengeId + userToken + encryptionKey + appId for Circle SDK.
  */
-export async function initiateWalletSetup(blockchain: string = "BASE_SEPOLIA"): Promise<WalletSetupChallenge> {
+const DEFAULT_BLOCKCHAIN = process.env.EXPO_PUBLIC_BLOCKCHAIN ?? "BASE_SEPOLIA";
+
+export async function initiateWalletSetup(blockchain: string = DEFAULT_BLOCKCHAIN): Promise<WalletSetupChallenge> {
     const { data } = await client.post("/wallet", { blockchain });
     return data.data;
 }
@@ -74,7 +76,7 @@ export async function initiateWalletSetup(blockchain: string = "BASE_SEPOLIA"): 
  */
 export async function confirmWalletSetup(
     userToken: string,
-    blockchain: string = "BASE_SEPOLIA"
+    blockchain: string = DEFAULT_BLOCKCHAIN
 ): Promise<WalletSetupConfirm> {
     const { data } = await client.post("/wallet/confirm-setup", { userToken, blockchain });
     return data.data;

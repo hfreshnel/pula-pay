@@ -18,7 +18,5 @@ export default function Index() {
         return <Redirect href="/(main)/dashboard" />;
     }
 
-    console.log("User is unauthenticated, redirecting to login");
-
     return <Redirect href="/(auth)/login" />;
 }

@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Animated } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Animated, Linking } from "react-native";
 import { useRef } from "react";
 import { router } from "expo-router";
 import { LogOut, Moon, Sun, ChevronRight, Shield, HelpCircle, FileText, Smartphone } from "lucide-react-native";
@@ -94,7 +94,7 @@ export default function Profile() {
     const s = useStyles(getStyles);
     const theme = useTheme();
     const { user } = useAuth();
-    const { wallet, displayBalance, balanceUsdc } = useWalletStore();
+    const { wallet, displayBalance, balanceUsdc, displayCurrency } = useWalletStore();
 
     const name = user?.name ?? "Utilisateur";
     const phone = user?.phoneNumber ?? "";
@@ -148,7 +148,7 @@ export default function Profile() {
                         <Text style={s.sectionTitle}>MON COMPTE</Text>
                         <View style={s.infoGrid}>
                             <View style={s.infoField}>
-                                <Text style={s.infoLabel}>Solde XOF</Text>
+                                <Text style={s.infoLabel}>Solde {displayCurrency}</Text>
                                 <Text style={s.infoValue}>{displayBalance ?? "–"}</Text>
                             </View>
                             <View style={s.infoField}>
@@ -208,7 +208,11 @@ export default function Profile() {
 
                     <View style={s.divider} />
 
-                    <View style={s.menuItem}>
+                    <TouchableOpacity
+                        style={s.menuItem}
+                        onPress={() => Linking.openURL("https://www.pulapay.app/")}
+                        activeOpacity={0.7}
+                    >
                         <View style={s.menuIcon}>
                             <Shield size={SIZES.iconSm} color={theme.colors.text} />
                         </View>
@@ -217,7 +221,7 @@ export default function Profile() {
                             <Text style={s.menuDesc}>PIN & authentification</Text>
                         </View>
                         <ChevronRight size={SIZES.iconSm} color={theme.colors.stone} />
-                    </View>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Support */}
@@ -240,7 +244,11 @@ export default function Profile() {
 
                     <View style={s.divider} />
 
-                    <View style={s.menuItem}>
+                    <TouchableOpacity
+                        style={s.menuItem}
+                        onPress={() => Linking.openURL("https://www.pulapay.app/")}
+                        activeOpacity={0.7}
+                    >
                         <View style={s.menuIcon}>
                             <FileText size={SIZES.iconSm} color={theme.colors.text} />
                         </View>
@@ -248,7 +256,7 @@ export default function Profile() {
                             <Text style={s.menuLabel}>Conditions d'utilisation</Text>
                         </View>
                         <ChevronRight size={SIZES.iconSm} color={theme.colors.stone} />
-                    </View>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Logout */}

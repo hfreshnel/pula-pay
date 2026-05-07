@@ -94,10 +94,10 @@ export default function WalletSummary() {
     const handleCreateWallet = async () => {
         setCreatingWallet(true);
         try {
-            const challengeData = await initiateWalletSetup("BASE_SEPOLIA");
+            const challengeData = await initiateWalletSetup();
             if (challengeData.challengeId) {
                 await executeCircleChallenge(challengeData);
-                await confirmWalletSetup(challengeData.userToken, "BASE_SEPOLIA");
+                await confirmWalletSetup(challengeData.userToken);
             } else {
                 await fetchWallet();
                 await fetchBalance();

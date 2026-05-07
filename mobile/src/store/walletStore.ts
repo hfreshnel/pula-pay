@@ -56,8 +56,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
                 try {
                     const circleWallet = await getCircleWallets();
                     if (circleWallet?.state === 'LIVE') {
-                        const challengeData = await initiateWalletSetup("BASE_SEPOLIA");
-                        await confirmWalletSetup(challengeData.userToken, "BASE_SEPOLIA");
+                        const challengeData = await initiateWalletSetup();
+                        await confirmWalletSetup(challengeData.userToken);
                         const wallet = await getMyWallet();
                         set({ wallet, walletNotFound: false });
                         await get().fetchBalance();
